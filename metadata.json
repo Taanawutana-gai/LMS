@@ -1,0 +1,7 @@
+{
+  "name": "Leave Management System",
+  "description": "A comprehensive leave workflow system designed for LINE LIFF integration, featuring smart policy assistance, leave balance tracking, and manager approval workflows.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
