@@ -4,7 +4,7 @@ import {
   Calendar, Home, PlusCircle, User, ShieldCheck, Clock, X, 
   ChevronLeft, Loader2, RefreshCcw, History, AlertCircle, 
   CheckCircle2, FileText, LogOut, Fingerprint, Search, MapPin, Hash, UserCircle,
-  MoreHorizontal, Key, ScanFace
+  MoreHorizontal, Key, ScanFace, AlertTriangle
 } from 'lucide-react';
 import { 
   UserRole, LeaveType, LeaveStatus, LeaveRequest, LeaveBalance, UserProfile 
@@ -63,12 +63,8 @@ const DashboardCard: React.FC<{ type: LeaveType; used: number; remain: number }>
 
   return (
     <div className={`relative overflow-hidden bg-white rounded-xl border-l-4 ${theme.border} shadow-sm transition-all active:scale-95 group h-[100px] flex flex-col justify-between p-3`}>
-      {/* Side Color Accent Strip */}
       <div className={`absolute top-0 left-0 w-1 h-full ${theme.color}`} />
-      
-      {/* Background Soft Tint */}
       <div className={`absolute inset-0 ${theme.bg} opacity-20 pointer-events-none`} />
-
       <div className="relative z-10">
         <h3 className={`text-[10px] font-[800] uppercase tracking-tight ${theme.text} leading-none mb-1 truncate`}>
           {theme.label}
@@ -78,7 +74,6 @@ const DashboardCard: React.FC<{ type: LeaveType; used: number; remain: number }>
           <span className="text-[9px] font-[600] text-slate-400 uppercase">วัน</span>
         </div>
       </div>
-
       <div className="relative z-10 mt-auto">
         <div className="flex justify-between items-end mb-1">
           <span className="text-[9px] font-[600] text-slate-400 uppercase leading-none">ใช้ {used}</span>
@@ -105,6 +100,7 @@ const App: React.FC = () => {
   const [lineName, setLineName] = useState('');
   const [lineUserId, setLineUserId] = useState('');
   const [zoomImg, setZoomImg] = useState<string | null>(null);
+  const [loginError, setLoginError] = useState<string | null>(null);
   
   const [newReq, setNewReq] = useState({
     type: LeaveType.ANNUAL, startDate: '', endDate: '', reason: '', attachment: ''
@@ -121,7 +117,7 @@ const App: React.FC = () => {
             setLineName(profile.displayName);
             setLinePicture(profile.pictureUrl);
             setLineUserId(profile.userId);
-            setUserIdInput(profile.userId); // Auto-fill User ID from LIFF
+            setUserIdInput(profile.userId);
             const u = await SheetService.checkUserStatus(profile.userId);
             if (u) { setUser(u); fetchData(u); setIsLoggedIn(true); }
           }
@@ -145,18 +141,39 @@ const App: React.FC = () => {
   };
 
   const handleLogin = async () => {
+    setLoginError(null);
     if (!staffIdInput.trim() || !userIdInput.trim()) {
-      alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+      setLoginError('กรุณากรอกรหัสพนักงานให้ครบถ้วน');
       return;
     }
+    
     setLoading(true);
     try {
+      // 1. ตรวจสอบข้อมูลพนักงานจาก Staff ID
       const p = await SheetService.getProfile(staffIdInput);
-      if (p) {
-        await SheetService.linkLineId(staffIdInput, lineUserId || userIdInput);
-        setUser(p); fetchData(p); setIsLoggedIn(true);
-      } else alert('ไม่พบรหัสพนักงาน');
-    } catch (e) { alert('เกิดข้อผิดพลาด'); }
+      
+      if (!p) {
+        setLoginError('ไม่พบรหัสพนักงานนี้ในระบบฐานข้อมูล');
+        setLoading(false);
+        return;
+      }
+
+      // 2. ตรวจสอบว่ารหัสพนักงานนี้ถูกผูกไว้กับ LINE ID อื่นหรือไม่ (Security Check)
+      // กรณี p.lineUserId มีค่า และไม่ตรงกับ LINE ID ปัจจุบัน
+      if (p.lineUserId && p.lineUserId !== userIdInput) {
+        setLoginError('รหัสพนักงานนี้ถูกลงทะเบียนด้วยบัญชี LINE อื่นไปแล้ว โปรดติดต่อ HR');
+        setLoading(false);
+        return;
+      }
+
+      // 3. หากผ่านการตรวจสอบ ให้ทำการผูก ID และเข้าสู่ระบบ
+      await SheetService.linkLineId(staffIdInput, userIdInput);
+      setUser({ ...p, lineUserId: userIdInput });
+      fetchData(p);
+      setIsLoggedIn(true);
+    } catch (e) { 
+      setLoginError('เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล');
+    }
     setLoading(false);
   };
 
@@ -194,7 +211,7 @@ const App: React.FC = () => {
       <div className="w-full max-w-sm glass-card rounded-[3rem] shadow-2xl p-8">
         <div className="bg-white/50 rounded-[2.5rem] p-8 flex flex-col items-center gap-6">
           <div className="w-20 h-20 rounded-3xl overflow-hidden border-4 border-white shadow-xl bg-slate-100">
-            {linePicture ? <img src={linePicture} className="w-full h-full object-cover" alt="Profile" /> : <User size={40} className="m-auto mt-5 text-slate-300" />}
+            {linePicture ? <img src={linePicture} className="w-full h-full object-cover" alt="Profile" /> : <UserCircle size={80} className="text-slate-200 m-auto mt-2" />}
           </div>
           <div>
             <p className="text-[11px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">Leave Online</p>
@@ -205,26 +222,33 @@ const App: React.FC = () => {
               <ScanFace className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors" size={18} />
               <input 
                 value={userIdInput} 
-                onChange={e=>setUserIdInput(e.target.value)} 
-                readOnly={!!lineUserId}
-                className={`w-full ${lineUserId ? 'bg-slate-50/50 cursor-not-allowed text-slate-400' : 'bg-white/80'} pl-12 pr-4 py-4 rounded-2xl font-bold border-none ring-1 ring-slate-100 outline-none focus:ring-2 focus:ring-blue-500 transition-all text-[11px]`} 
-                placeholder="LINE User ID (อัตโนมัติ)" 
+                readOnly
+                className="w-full bg-slate-50/80 cursor-not-allowed text-slate-400 pl-12 pr-4 py-4 rounded-2xl font-bold border-none ring-1 ring-slate-100 outline-none transition-all text-[11px]" 
+                placeholder="LINE User ID" 
               />
-              {lineUserId && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[8px] font-black text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded">DETECTED</span>}
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[8px] font-black text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">MATCHED</span>
             </div>
             <div className="relative group">
               <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors" size={18} />
               <input 
                 value={staffIdInput} 
-                onChange={e=>setStaffIdInput(e.target.value)} 
-                className="w-full bg-white/80 pl-12 pr-4 py-4 rounded-2xl font-bold border-none ring-1 ring-slate-100 outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm" 
+                onChange={e=>{ setStaffIdInput(e.target.value); setLoginError(null); }} 
+                className={`w-full bg-white/80 pl-12 pr-4 py-4 rounded-2xl font-bold border-none ring-1 ${loginError ? 'ring-rose-200 focus:ring-rose-500' : 'ring-slate-100 focus:ring-blue-500'} outline-none transition-all text-sm`} 
                 placeholder="Staff ID (รหัสพนักงาน)" 
               />
             </div>
-            <button onClick={handleLogin} disabled={loading} className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs">
-              {loading ? <Loader2 className="animate-spin" /> : 'ยืนยันเพื่อเข้าใช้งาน'}
+
+            {loginError && (
+              <div className="bg-rose-50 border border-rose-100 p-3 rounded-xl flex items-start gap-2.5 animate-in fade-in slide-in-from-top-2">
+                <AlertTriangle size={14} className="text-rose-500 shrink-0 mt-0.5" />
+                <p className="text-[10px] font-bold text-rose-600 leading-tight">{loginError}</p>
+              </div>
+            )}
+
+            <button onClick={handleLogin} disabled={loading} className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs mt-2">
+              {loading ? <Loader2 className="animate-spin" /> : 'ตรวจสอบข้อมูลและยืนยัน'}
             </button>
-            <p className="text-center text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-2">โปรดระบุรหัสพนักงานเพื่อเชื่อมต่อกับ LINE</p>
+            <p className="text-center text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-2">ระบบจะตรวจสอบความถูกต้องของรหัสพนักงานก่อนดำเนินการ</p>
           </div>
         </div>
       </div>
