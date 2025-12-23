@@ -23,7 +23,6 @@ import {
   History,
   Repeat,
   AlertCircle,
-  CheckCircle2,
   Database,
   TableProperties
 } from 'lucide-react';
@@ -34,33 +33,21 @@ import {
   LeaveRequest, 
   LeaveBalance, 
   UserProfile 
-} from './types';
-import { SheetService } from './sheetService';
+} from './types.ts';
+import { SheetService } from './sheetService.ts';
 
-// --- Constants ---
 const LIFF_ID = '2007509057-esMqbZzO';
 
-// --- Helper Functions ---
 const getLeaveTheme = (type: LeaveType) => {
   switch (type) {
-    case LeaveType.SICK: 
-      return { color: 'bg-rose-500', bg: 'bg-rose-50', text: 'text-rose-600', icon: Thermometer, label: 'ลาป่วย' };
-    case LeaveType.ANNUAL: 
-      return { color: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-600', icon: Palmtree, label: 'ลาพักร้อน' };
-    case LeaveType.PERSONAL: 
-      return { color: 'bg-amber-500', bg: 'bg-amber-50', text: 'text-amber-600', icon: UserCheck, label: 'ลากิจ' };
-    case LeaveType.PUBLIC_HOLIDAY: 
-      return { color: 'bg-indigo-500', bg: 'bg-indigo-50', text: 'text-indigo-600', icon: Flag, label: 'วันหยุด' };
-    case LeaveType.MATERNITY: 
-      return { color: 'bg-purple-500', bg: 'bg-purple-50', text: 'text-purple-600', icon: Baby, label: 'ลาคลอด' };
-    case LeaveType.LEAVE_WITHOUT_PAY: 
-      return { color: 'bg-slate-600', bg: 'bg-slate-50', text: 'text-slate-700', icon: Wallet, label: 'ไม่รับค่าจ้าง' };
-    case LeaveType.WEEKLY_HOLIDAY_SWITCH:
-      return { color: 'bg-cyan-500', bg: 'bg-cyan-50', text: 'text-cyan-600', icon: Repeat, label: 'สลับวันหยุด' };
-    case LeaveType.OTHER: 
-      return { color: 'bg-fuchsia-500', bg: 'bg-fuchsia-50', text: 'text-fuchsia-600', icon: MoreHorizontal, label: 'ลาอื่นๆ' };
-    default: 
-      return { color: 'bg-slate-500', bg: 'bg-slate-50', text: 'text-slate-600', icon: Info, label: 'อื่นๆ' };
+    case LeaveType.SICK: return { color: 'bg-rose-500', bg: 'bg-rose-50', text: 'text-rose-600', icon: Thermometer, label: 'ลาป่วย' };
+    case LeaveType.ANNUAL: return { color: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-600', icon: Palmtree, label: 'ลาพักร้อน' };
+    case LeaveType.PERSONAL: return { color: 'bg-amber-500', bg: 'bg-amber-50', text: 'text-amber-600', icon: UserCheck, label: 'ลากิจ' };
+    case LeaveType.PUBLIC_HOLIDAY: return { color: 'bg-indigo-500', bg: 'bg-indigo-50', text: 'text-indigo-600', icon: Flag, label: 'วันหยุด' };
+    case LeaveType.MATERNITY: return { color: 'bg-purple-500', bg: 'bg-purple-50', text: 'text-purple-600', icon: Baby, label: 'ลาคลอด' };
+    case LeaveType.LEAVE_WITHOUT_PAY: return { color: 'bg-slate-600', bg: 'bg-slate-50', text: 'text-slate-700', icon: Wallet, label: 'ไม่รับค่าจ้าง' };
+    case LeaveType.WEEKLY_HOLIDAY_SWITCH: return { color: 'bg-cyan-500', bg: 'bg-cyan-50', text: 'text-cyan-600', icon: Repeat, label: 'สลับวันหยุด' };
+    default: return { color: 'bg-fuchsia-500', bg: 'bg-fuchsia-50', text: 'text-fuchsia-600', icon: MoreHorizontal, label: 'ลาอื่นๆ' };
   }
 };
 
@@ -69,11 +56,9 @@ const calculateDays = (start: string, end: string): number => {
   const startDate = new Date(start);
   const endDate = new Date(end);
   const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-  return diffDays > 0 ? diffDays : 0;
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 };
 
-// --- UI Components ---
 const StatusBadge = ({ status }: { status: LeaveStatus }) => {
   const styles = {
     [LeaveStatus.PENDING]: 'bg-amber-100 text-amber-700 border-amber-200',
@@ -81,11 +66,7 @@ const StatusBadge = ({ status }: { status: LeaveStatus }) => {
     [LeaveStatus.REJECTED]: 'bg-rose-100 text-rose-700 border-rose-200',
     [LeaveStatus.CANCELLED]: 'bg-slate-100 text-slate-500 border-slate-200',
   };
-  return (
-    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-widest ${styles[status]}`}>
-      {status}
-    </span>
-  );
+  return <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-widest ${styles[status]}`}>{status}</span>;
 };
 
 const DashboardCard: React.FC<{ type: LeaveType; value: number; total: number; onClick: () => void }> = ({ type, value, total, onClick }) => {
@@ -95,44 +76,30 @@ const DashboardCard: React.FC<{ type: LeaveType; value: number; total: number; o
   const progress = (total + value) > 0 ? (value / (value + total)) * 100 : 0;
 
   return (
-    <div 
-      onClick={onClick}
-      className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm cursor-pointer active:scale-95 transition-all hover:border-slate-300 group"
-    >
+    <div onClick={onClick} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm cursor-pointer active:scale-95 transition-all hover:border-slate-300 group">
       <div className="flex justify-between items-start mb-4">
-        <div className={`p-2.5 rounded-xl ${theme.bg} ${theme.text}`}>
-          <Icon size={20} />
-        </div>
+        <div className={`p-2.5 rounded-xl ${theme.bg} ${theme.text}`}><Icon size={20} /></div>
         <ChevronRight size={14} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
       </div>
-
       <div>
-        <h3 className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1 truncate">
-          {theme.label}
-        </h3>
+        <h3 className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1 truncate">{theme.label}</h3>
         <div className="flex items-baseline gap-1">
           <span className="text-2xl font-bold text-slate-800">{isSwitch ? value : total}</span>
-          <span className="text-[10px] font-medium text-slate-400">
-            {isSwitch ? 'รายการ' : 'วันคงเหลือ'}
-          </span>
+          <span className="text-[10px] font-medium text-slate-400">{isSwitch ? 'รายการ' : 'วันคงเหลือ'}</span>
         </div>
       </div>
-
       {!isSwitch && (
         <div className="mt-4 space-y-1.5">
           <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
             <div className={`h-full ${theme.color} transition-all duration-700`} style={{ width: `${Math.min(100, progress)}%` }} />
           </div>
-          <div className="text-[9px] font-bold text-slate-400 uppercase">
-            ใช้ไป {value} วัน
-          </div>
+          <div className="text-[9px] font-bold text-slate-400 uppercase">ใช้ไป {value} วัน</div>
         </div>
       )}
     </div>
   );
 };
 
-// --- Main Application ---
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -143,41 +110,40 @@ const App: React.FC = () => {
   const [balances, setBalances] = useState<LeaveBalance[]>([]);
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [staffIdInput, setStaffIdInput] = useState('');
-  const [lineUserId, setLineUserId] = useState('Wait for LIFF...');
+  
+  const [lineUserId, setLineUserId] = useState('Initializing...');
   const [linePicture, setLinePicture] = useState('');
-
-  // Diagnostic State
-  const [diagnosticInfo, setDiagnosticInfo] = useState<any>(null);
+  const [isLiffReady, setIsLiffReady] = useState(false);
   const [isDiagnosticOpen, setIsDiagnosticOpen] = useState(false);
+  const [diagnosticInfo, setDiagnosticInfo] = useState<any>(null);
 
-  // LIFF Initialization
   useEffect(() => {
     const initLiff = async () => {
       try {
-        // @ts-ignore
-        if (typeof liff === 'undefined') {
-          console.error('LIFF SDK not found');
-          setLineUserId('SDK_NOT_LOADED');
-          return;
-        }
-        // @ts-ignore
-        await liff.init({ liffId: LIFF_ID });
-        // @ts-ignore
-        if (liff.isLoggedIn()) {
-          // @ts-ignore
-          const profile = await liff.getProfile();
-          setLineUserId(profile.userId);
-          setLinePicture(profile.pictureUrl || '');
+        const liff = (window as any).liff;
+        if (liff) {
+          await liff.init({ liffId: LIFF_ID });
+          if (liff.isLoggedIn()) {
+            const profile = await liff.getProfile();
+            setLineUserId(profile.userId);
+            setLinePicture(profile.pictureUrl || '');
+          } else {
+            setLineUserId('BROWSER_MODE');
+          }
         } else {
-          // @ts-ignore
-          liff.login();
+          setLineUserId('LIFF_SDK_NOT_FOUND');
         }
       } catch (err) {
-        console.error('LIFF Init failed', err);
-        setLineUserId('LINE_ERROR');
+        console.error('LIFF Init Error:', err);
+        setLineUserId('INIT_ERROR');
+      } finally {
+        setIsLiffReady(true);
       }
     };
+
+    const timer = setTimeout(() => setIsLiffReady(true), 4000);
     initLiff();
+    return () => clearTimeout(timer);
   }, []);
 
   const handleLogin = async () => {
@@ -193,11 +159,10 @@ const App: React.FC = () => {
         setRequests(reqs);
         setIsLoggedIn(true);
       } else {
-        alert('ไม่พบรหัสพนักงานในฐานข้อมูลระบบ (Employee_DB) กรุณาตรวจสอบรหัสอีกครั้ง');
+        alert('ไม่พบรหัสพนักงาน: ' + staffIdInput);
       }
-    } catch (err) {
-      console.error(err);
-      alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับ Google Sheets');
+    } catch (err: any) {
+      alert('Login Error: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -225,233 +190,82 @@ const App: React.FC = () => {
     }
   };
 
-  const handleCreate = async (data: { type: LeaveType, startDate: string, endDate: string, reason: string }) => {
-    if (!user) return;
-    setLoading(true);
-    const totalDays = calculateDays(data.startDate, data.endDate);
-    const request: Partial<LeaveRequest> = {
-      appliedDate: new Date().toISOString().split('T')[0],
-      staffId: user.staffId,
-      staffName: user.name,
-      siteId: user.siteId,
-      type: data.type,
-      startDate: data.startDate,
-      endDate: data.endDate,
-      totalDays: totalDays,
-      reason: data.reason,
-      status: LeaveStatus.PENDING
-    };
-
-    try {
-      const res = await SheetService.submitRequest(request);
-      if (res.success) {
-        alert('ส่งคำขอลาสำเร็จ');
-        await syncData(user.staffId);
-        setView('dashboard');
-      } else {
-        alert('ไม่สามารถส่งคำขอได้ เนื่องจากข้อผิดพลาดของระบบ');
-      }
-    } catch (e) {
-      console.error(e);
-      alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAction = async (requestId: string, status: LeaveStatus) => {
-    if (!user) return;
-    setLoading(true);
-    try {
-      const approverName = user.roleType === UserRole.SUPERVISOR ? user.name : undefined;
-      const success = await SheetService.updateRequestStatus(requestId, status, approverName);
-      if (success) {
-        await syncData(user.staffId);
-      } else {
-        alert('การดำเนินการล้มเหลว');
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (!isLiffReady) return null; // หน้า HTML จะมี Loader dots แสดงอยู่แล้ว
 
   if (!isLoggedIn) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8fafc] px-4 py-10">
-      {/* Diagnostic Modal (Enhanced for Employee Database View) */}
       {isDiagnosticOpen && (
-        <div className="fixed inset-0 z-[110] bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
-          <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl p-6 sm:p-10 max-h-[90vh] overflow-hidden flex flex-col relative animate-in zoom-in duration-300">
-            <button onClick={() => setIsDiagnosticOpen(false)} className="absolute top-8 right-8 p-2 hover:bg-slate-100 rounded-full transition-colors">
-              <X size={24} className="text-slate-400" />
-            </button>
-            
+        <div className="fixed inset-0 z-[110] bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-2">
+          <div className="bg-white w-full max-w-2xl rounded-[2.5rem] p-6 max-h-[90vh] overflow-hidden flex flex-col relative">
+            <button onClick={() => setIsDiagnosticOpen(false)} className="absolute top-8 right-8 p-2 hover:bg-slate-100 rounded-full"><X size={24} /></button>
             <div className="flex items-center gap-4 mb-8">
-              <div className="p-4 bg-blue-600 text-white rounded-[1.25rem] shadow-lg shadow-blue-100">
-                <TableProperties size={28} />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-slate-800">ฐานข้อมูลพนักงาน (Employ_DB)</h2>
-                <p className="text-slate-400 text-sm font-medium">รายละเอียดข้อมูลการเชื่อมต่อปัจจุบัน</p>
-              </div>
+              <div className="p-4 bg-blue-600 text-white rounded-[1.25rem]"><TableProperties size={28} /></div>
+              <h2 className="text-2xl font-bold">ฐานข้อมูลพนักงาน</h2>
             </div>
-            
             {diagnosticInfo?.success ? (
-              <div className="flex-1 overflow-y-auto space-y-8 pr-2 custom-scrollbar">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="p-5 bg-blue-50/50 border border-blue-100 rounded-3xl">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                      <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.15em]">Connection Status</p>
-                    </div>
-                    <p className="text-lg font-bold text-slate-800">เชื่อมต่อสำเร็จ</p>
-                  </div>
-                  <div className="p-5 bg-slate-50 border border-slate-100 rounded-3xl">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-2">Total Records Found</p>
-                    <p className="text-lg font-bold text-slate-800">{diagnosticInfo.rowCount - 1} พนักงาน</p>
-                  </div>
+              <div className="flex-1 overflow-y-auto space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-5 bg-emerald-50 rounded-3xl border border-emerald-100"><p className="text-lg font-bold text-emerald-700">เชื่อมต่อแล้ว</p></div>
+                  <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100"><p className="text-lg font-bold">{diagnosticInfo.rowCount - 1} รายการ</p></div>
                 </div>
-                
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between px-2">
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">ข้อมูลตัวอย่าง (Employee List)</h3>
-                    <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-md">Showing top 5</span>
-                  </div>
-                  
-                  <div className="overflow-x-auto rounded-[1.5rem] border border-slate-100 shadow-sm">
-                    <table className="w-full text-left border-collapse min-w-[600px]">
-                      <thead>
-                        <tr className="bg-slate-50/80 border-b border-slate-100">
-                          {diagnosticInfo.headers.map((h: string, i: number) => (
-                            <th key={i} className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-wider">{h}</th>
-                          ))}
+                <div className="overflow-x-auto rounded-2xl border border-slate-100">
+                  <table className="w-full text-[12px]">
+                    <thead className="bg-slate-50">
+                      <tr>{diagnosticInfo.headers.map((h:any, i:number)=><th key={i} className="p-3 text-left">{h}</th>)}</tr>
+                    </thead>
+                    <tbody>
+                      {diagnosticInfo.sampleData.map((row:any[], i:number)=>(
+                        <tr key={i} className="border-t">
+                          {row.map((c:any, j:number)=><td key={j} className="p-3">{String(c)}</td>)}
                         </tr>
-                      </thead>
-                      <tbody>
-                        {diagnosticInfo.sampleData.map((row: any[], i: number) => (
-                          <tr key={i} className="border-b border-slate-50 hover:bg-blue-50/20 transition-colors last:border-none">
-                            {row.map((cell: any, j: number) => (
-                              <td key={j} className="p-4 text-[12px] font-semibold text-slate-700">
-                                {j === 4 ? (
-                                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${cell === 'Supervisor' ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-500'}`}>
-                                    {String(cell)}
-                                  </span>
-                                ) : String(cell)}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div className="p-5 bg-amber-50 border border-amber-100 rounded-3xl flex gap-4 items-start">
-                  <Info className="text-amber-500 shrink-0 mt-0.5" size={18} />
-                  <div className="space-y-1">
-                    <p className="text-xs font-bold text-amber-800">คำแนะนำการใช้งาน</p>
-                    <p className="text-[11px] text-amber-700/80 leading-relaxed">ข้อมูลที่แสดงข้างต้นเป็นข้อมูลทดสอบการเชื่อมต่อจาก Google Sheets หากท่านไม่พบข้อมูลของตนเอง กรุณาติดต่อฝ่ายบุคคลเพื่อลงทะเบียนรหัสพนักงานเข้าสู่ระบบ Employ_DB</p>
-                  </div>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             ) : (
-              <div className="p-8 bg-rose-50 border border-rose-100 rounded-[2.5rem] text-center space-y-4">
-                <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <AlertCircle size={32} className="text-rose-500" />
-                </div>
-                <h3 className="text-lg font-bold text-rose-800">การเชื่อมต่อผิดพลาด</h3>
-                <div className="text-left bg-white p-6 rounded-2xl border border-rose-100 space-y-3">
-                  <p className="text-[11px] font-bold text-rose-400 uppercase">Error Message:</p>
-                  <code className="block text-[10px] bg-slate-50 p-3 rounded-lg text-rose-600 break-all">{diagnosticInfo?.message || 'Network Error'}</code>
-                  <p className="text-[11px] font-bold text-slate-500 mt-4 leading-relaxed italic">
-                    *โปรดตรวจสอบว่าได้ทำการ "Deploy as Web App" ใน Google Apps Script โดยตั้งค่า Who has access เป็น "Anyone" แล้วหรือไม่
-                  </p>
-                </div>
+              <div className="p-8 bg-rose-50 rounded-3xl text-center">
+                <AlertCircle size={40} className="mx-auto text-rose-500 mb-4" />
+                <p className="font-bold text-rose-800">Connection Error</p>
+                <code className="block mt-4 text-[10px] bg-white p-4 rounded-xl text-left">{diagnosticInfo?.message}</code>
               </div>
             )}
-            
-            <button 
-              onClick={() => setIsDiagnosticOpen(false)}
-              className="w-full mt-8 py-[1.25rem] bg-slate-900 text-white font-bold rounded-2xl active:scale-95 transition-all shadow-xl shadow-slate-200"
-            >
-              รับทราบ
-            </button>
           </div>
         </div>
       )}
 
-      {/* GeoClock Login Card */}
-      <div className="w-full max-w-[400px] bg-white rounded-[40px] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.08)] px-10 py-12 relative flex flex-col items-center">
+      <div className="w-full max-w-[400px] bg-white rounded-[40px] shadow-2xl px-10 py-12 flex flex-col items-center">
+        <div className="absolute top-10 right-10 w-12 h-12 rounded-full border-2 border-emerald-100 overflow-hidden">
+          {linePicture ? <img src={linePicture} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-100 flex items-center justify-center"><User size={20} className="text-slate-300"/></div>}
+        </div>
+        <div className="mt-8 mb-8 w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center shadow-xl shadow-blue-100">
+          <Clock size={36} className="text-white" />
+        </div>
+        <h1 className="text-4xl font-bold text-slate-800">GeoClock</h1>
+        <p className="text-slate-400 font-medium mb-10">LMS Online Portal</p>
         
-        {/* Profile Avatar Top Right */}
-        <div className="absolute top-10 right-10 w-[54px] h-[54px] rounded-full border-[3.5px] border-[#d1fae5] p-[2px] overflow-hidden">
-          {linePicture ? (
-            <img src={linePicture} alt="LINE Avatar" className="w-full h-full object-cover rounded-full" />
-          ) : (
-            <div className="w-full h-full bg-emerald-50 rounded-full flex items-center justify-center">
-              <User className="text-emerald-300" size={24} />
-            </div>
-          )}
-        </div>
-
-        {/* Brand Icon */}
-        <div className="mt-8 mb-8">
-          <div className="w-[86px] h-[86px] bg-[#2563eb] rounded-[2.3rem] flex items-center justify-center shadow-2xl shadow-blue-100">
-            <Clock size={42} className="text-white" strokeWidth={2.5} />
+        <div className="w-full space-y-6">
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">LINE ID</label>
+            <div className="w-full bg-slate-50 px-5 py-4 rounded-2xl text-[10px] text-slate-400 font-mono truncate">{lineUserId}</div>
           </div>
-        </div>
-
-        {/* Title Section */}
-        <h1 className="text-[42px] font-bold text-[#1e293b] tracking-tight leading-none">GeoClock</h1>
-        <p className="text-[#94a3b8] text-[15.5px] font-medium mt-1.5 mb-10">Secure Attendance System</p>
-
-        {/* Form Fields */}
-        <div className="w-full space-y-7">
-          
-          {/* USER ID (LINE ID) */}
-          <div className="space-y-2">
-            <label className="text-[10.5px] font-bold text-[#94a3b8] uppercase tracking-[0.2em] ml-1">USER ID</label>
-            <div className="w-full bg-[#f1f5f9] border-none px-6 py-[19px] rounded-2xl text-[13px] text-[#64748b] font-medium truncate">
-              {lineUserId}
-            </div>
-          </div>
-
-          {/* STAFF ID */}
-          <div className="space-y-2">
-            <label className="text-[10.5px] font-bold text-[#94a3b8] uppercase tracking-[0.2em] ml-1">STAFF ID</label>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">STAFF ID</label>
             <input 
-              type="text"
-              className="w-full bg-[#f1f5f9] border-none px-6 py-[19px] rounded-2xl text-[#1e293b] outline-none font-bold placeholder:text-[#cbd5e1] placeholder:font-medium text-[16px] transition-all focus:bg-[#ecf2ff]"
+              type="text" 
+              className="w-full bg-slate-100 px-5 py-4 rounded-2xl text-slate-800 font-bold outline-none focus:ring-2 ring-blue-500 transition-all"
               placeholder="กรอกรหัสพนักงาน"
               value={staffIdInput}
-              onChange={(e) => setStaffIdInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+              onChange={(e)=>setStaffIdInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
             />
           </div>
-
-          {/* Log In Button */}
-          <button 
-            onClick={handleLogin}
-            disabled={loading || !staffIdInput}
-            className="w-full bg-[#2563eb] text-white font-bold py-[21px] rounded-[1.25rem] shadow-[0_16px_36px_-6px_rgba(37,99,235,0.4)] hover:bg-[#1d4ed8] active:scale-[0.97] transition-all mt-4 flex items-center justify-center text-[18px] tracking-wide"
-          >
-            {loading ? <Loader2 className="animate-spin" size={26} /> : 'Log In'}
+          <button onClick={handleLogin} disabled={loading} className="w-full bg-blue-600 text-white font-bold py-5 rounded-2xl shadow-lg shadow-blue-200 active:scale-95 transition-all disabled:opacity-50">
+            {loading ? <Loader2 className="animate-spin mx-auto" /> : 'Log In'}
           </button>
-
-          {/* Diagnostic Button - Improved Label */}
-          <button 
-            onClick={handleTestConnection}
-            className="w-full flex items-center justify-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-blue-500 transition-colors py-2 active:scale-95"
-          >
-            <Database size={14} />
-            ตรวจสอบฐานข้อมูลพนักงาน
+          <button onClick={handleTestConnection} className="w-full flex items-center justify-center gap-2 text-[10px] font-bold text-slate-400 uppercase hover:text-blue-500 transition-colors">
+            <Database size={14} /> ตรวจสอบฐานข้อมูลพนักงาน
           </button>
-        </div>
-
-        {/* Footer Brand */}
-        <div className="mt-12 text-[10px] font-bold text-[#cbd5e1] uppercase tracking-[0.28em] text-center">
-          MANAGEMENT BY SMC PROPERTY SOFT
         </div>
       </div>
     </div>
@@ -459,256 +273,62 @@ const App: React.FC = () => {
 
   return (
     <div className="max-w-md mx-auto min-h-screen bg-slate-50 shadow-2xl relative flex flex-col">
-      {loading && (
-        <div className="fixed inset-0 z-[100] bg-white/60 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
-          <Loader2 className="animate-spin text-blue-600" size={32} />
-          <p className="text-blue-600 font-bold text-xs uppercase tracking-widest animate-pulse">กำลังซิงค์ข้อมูล...</p>
-        </div>
-      )}
-
-      {/* Header */}
       <div className="px-6 py-4 flex justify-between items-center bg-white border-b border-slate-100 sticky top-0 z-50">
         <div className="flex items-center gap-3">
-           <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-white">
-             <Clock size={20} />
-           </div>
-           <div>
-              <span className="block font-bold text-slate-800 text-sm">LMS ONLINE</span>
-              <span className="text-[10px] text-blue-500 font-bold">{user?.siteId}</span>
-           </div>
+           <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-white"><Clock size={20} /></div>
+           <div><span className="block font-bold text-slate-800 text-sm">LMS ONLINE</span><span className="text-[10px] text-blue-500 font-bold uppercase">{user?.siteId}</span></div>
         </div>
-        <button onClick={() => syncData(user!.staffId)} className="p-2 text-slate-300 hover:text-blue-600 transition-colors">
-          <RefreshCcw size={18} />
-        </button>
+        <button onClick={() => syncData(user!.staffId)} className={`p-2 transition-all ${loading ? 'animate-spin text-blue-600' : 'text-slate-300'}`}><RefreshCcw size={18} /></button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-6 pb-24">
         {selectedLeaveType ? (
-          <div className="space-y-6 animate-in slide-in-from-right-4">
+          <div className="space-y-6">
             <header className="flex items-center gap-3">
-              <button onClick={() => setSelectedLeaveType(null)} className="p-2 hover:bg-white rounded-full"><ChevronLeft size={24} /></button>
+              <button onClick={() => setSelectedLeaveType(null)} className="p-2 hover:bg-slate-100 rounded-full"><ChevronLeft size={24} /></button>
               <h1 className="text-xl font-bold">{getLeaveTheme(selectedLeaveType).label}</h1>
             </header>
-            <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm text-center">
-              <p className="text-xs font-bold text-slate-400 uppercase mb-2">วันคงเหลือปัจจุบัน</p>
-              <h2 className="text-6xl font-black text-slate-800 tracking-tighter">
-                {balances.find(b => b.type === selectedLeaveType)?.remain || 0}
-              </h2>
-              <p className="text-xs font-bold text-slate-400 mt-2">วัน</p>
-            </div>
-            <div className="space-y-3">
-               <h3 className="text-xs font-bold text-slate-400 uppercase px-1">ประวัติรายการ</h3>
-               {requests.filter(r => r.type === selectedLeaveType).map(req => (
-                 <div key={req.id} className="bg-white p-4 rounded-2xl border border-slate-50 flex justify-between items-center shadow-sm">
-                   <div>
-                     <p className="text-sm font-bold text-slate-800">{req.startDate}</p>
-                     <p className="text-[10px] text-slate-400">ลา {req.totalDays} วัน</p>
-                   </div>
-                   <StatusBadge status={req.status} />
-                 </div>
-               ))}
+            <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 text-center shadow-sm">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">คงเหลือปัจจุบัน</p>
+              <h2 className="text-6xl font-black text-slate-800 my-2">{balances.find(b=>b.type===selectedLeaveType)?.remain || 0}</h2>
+              <p className="text-xs font-bold text-slate-400">วัน</p>
             </div>
           </div>
-        ) : (
-          <>
-            {view === 'dashboard' && (
-              <div className="space-y-8 animate-in fade-in duration-500">
-                <header className="flex justify-between items-end">
-                  <div>
-                    <h1 className="text-2xl font-bold text-slate-800">สวัสดี, {user?.name.split(' ')[0]}</h1>
-                    <p className="text-slate-500 text-xs">{user?.position}</p>
-                  </div>
-                  <button onClick={() => setView('new')} className="bg-blue-600 text-white p-3 rounded-2xl shadow-lg active:scale-90 transition-all">
-                    <PlusCircle size={28} />
-                  </button>
-                </header>
-
-                <section className="grid grid-cols-2 gap-4">
-                  {balances.map(b => (
-                    <DashboardCard key={b.type} type={b.type} value={b.used} total={b.remain} onClick={() => setSelectedLeaveType(b.type)} />
-                  ))}
-                </section>
-
-                <section>
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">รายการล่าสุด</h2>
-                    <button className="text-blue-600 text-xs font-bold" onClick={() => setView('history')}>ดูทั้งหมด</button>
-                  </div>
-                  <div className="space-y-3">
-                    {requests.slice(0, 3).map(req => (
-                      <div key={req.id} className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${getLeaveTheme(req.type).bg} ${getLeaveTheme(req.type).text}`}>
-                            <Calendar size={18} />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-slate-800 text-xs truncate max-w-[120px]">{req.type.split(' (')[0]}</h4>
-                            <p className="text-[10px] text-slate-400">{req.startDate}</p>
-                          </div>
-                        </div>
-                        <StatusBadge status={req.status} />
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              </div>
-            )}
-            
-            {view === 'new' && (
-              <div className="space-y-6 animate-in slide-in-from-bottom-4">
-                <header className="flex items-center gap-3">
-                  <button onClick={() => setView('dashboard')} className="p-2 hover:bg-white rounded-full"><ChevronLeft size={24} /></button>
-                  <h1 className="text-xl font-bold">ยื่นใบลาใหม่</h1>
-                </header>
-                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-5">
-                   <div className="space-y-2">
-                      <label className="text-xs font-bold text-slate-400 uppercase">ประเภทการลา</label>
-                      <select id="leave-type-select" className="w-full bg-slate-50 border-none p-4 rounded-xl font-bold text-slate-700 outline-none ring-1 ring-slate-100 focus:ring-blue-600">
-                        {Object.values(LeaveType).map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                   </div>
-                   <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-400 uppercase">วันที่เริ่ม</label>
-                        <input id="start-date" type="date" className="w-full bg-slate-50 p-4 rounded-xl font-bold text-xs" />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-400 uppercase">วันที่สิ้นสุด</label>
-                        <input id="end-date" type="date" className="w-full bg-slate-50 p-4 rounded-xl font-bold text-xs" />
-                      </div>
-                   </div>
-                   <div className="space-y-2">
-                      <label className="text-xs font-bold text-slate-400 uppercase">เหตุผลการลา</label>
-                      <textarea id="leave-reason" className="w-full bg-slate-50 p-4 rounded-xl text-sm min-h-[100px]" placeholder="ระบุเหตุผลประกอบ..." />
-                   </div>
-                   <button 
-                    onClick={() => {
-                      const type = (document.getElementById('leave-type-select') as HTMLSelectElement).value as LeaveType;
-                      const startDate = (document.getElementById('start-date') as HTMLInputElement).value;
-                      const endDate = (document.getElementById('end-date') as HTMLInputElement).value;
-                      const reason = (document.getElementById('leave-reason') as HTMLTextAreaElement).value;
-                      if(startDate && endDate && reason) handleCreate({ type, startDate, endDate, reason });
-                      else alert('กรุณากรอกข้อมูลให้ครบ');
-                    }}
-                    className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold shadow-lg active:scale-95 transition-all"
-                  >
-                    ยืนยันการส่งข้อมูล
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {view === 'history' && (
-              <div className="space-y-6 animate-in fade-in">
-                 <h1 className="text-xl font-bold">ประวัติรายการ</h1>
-                 <div className="space-y-4">
-                   {requests.map(req => (
-                     <div key={req.id} className="bg-white p-5 rounded-3xl border border-slate-50 space-y-4 shadow-sm">
-                       <div className="flex justify-between items-start">
-                          <div className="flex gap-3">
-                            <div className={`p-2.5 rounded-xl ${getLeaveTheme(req.type).bg} ${getLeaveTheme(req.type).text}`}>
-                               <Calendar size={22} />
-                            </div>
-                            <div>
-                               <h3 className="font-bold text-slate-800 text-sm">{req.type.split(' (')[0]}</h3>
-                               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{req.startDate} — {req.totalDays} วัน</p>
-                            </div>
-                          </div>
-                          <StatusBadge status={req.status} />
-                       </div>
-                       <p className="text-xs text-slate-500 italic bg-slate-50 p-3 rounded-xl">"{req.reason}"</p>
-                       {req.status === LeaveStatus.PENDING && (
-                         <button onClick={() => handleAction(req.id, LeaveStatus.CANCELLED)} className="w-full py-2.5 text-[10px] font-bold text-rose-500 uppercase border border-rose-50 rounded-xl hover:bg-rose-50">ยกเลิกคำขอ</button>
-                       )}
-                       {req.approverReason && (
-                          <div className="mt-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
-                             <p className="text-[9px] font-bold text-indigo-600 uppercase mb-1">ความเห็นหัวหน้า: {req.approver}</p>
-                             <p className="text-xs text-slate-700">{req.approverReason}</p>
-                          </div>
-                       )}
-                     </div>
-                   ))}
-                 </div>
-              </div>
-            )}
-
-            {view === 'manager' && (
-              <div className="space-y-6 animate-in fade-in">
-                <h1 className="text-xl font-bold flex items-center gap-2">รอการอนุมัติ ({requests.filter(r => r.status === LeaveStatus.PENDING).length})</h1>
-                <div className="space-y-4">
-                  {requests.filter(r => r.status === LeaveStatus.PENDING).map(req => (
-                    <div key={req.id} className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 space-y-4">
-                      <div className="flex justify-between items-center">
-                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-slate-100 rounded-xl overflow-hidden">
-                              <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${req.staffId}`} alt="avatar" />
-                            </div>
-                            <div>
-                              <h3 className="font-bold text-slate-800 text-sm">{req.staffName}</h3>
-                              <p className="text-[10px] text-blue-500 font-bold">{req.siteId}</p>
-                            </div>
-                         </div>
-                      </div>
-                      <div className="p-4 bg-slate-50 rounded-2xl">
-                         <div className="flex justify-between items-center mb-1">
-                           <span className="text-[10px] font-bold text-slate-400 uppercase">{req.type.split(' (')[0]}</span>
-                           <span className="text-sm font-bold text-blue-600">{req.totalDays} วัน</span>
-                         </div>
-                         <p className="text-[10px] text-slate-500 font-medium">{req.startDate} — {req.endDate}</p>
-                      </div>
-                      <p className="text-xs text-slate-500 italic">"{req.reason}"</p>
-                      <div className="flex gap-2">
-                        <button onClick={() => handleAction(req.id, LeaveStatus.REJECTED)} className="flex-1 p-3 border border-slate-200 rounded-xl text-xs font-bold text-slate-500">ปฏิเสธ</button>
-                        <button onClick={() => handleAction(req.id, LeaveStatus.APPROVED)} className="flex-[2] bg-blue-600 text-white p-3 rounded-xl text-xs font-bold shadow-lg">อนุมัติ</button>
-                      </div>
+        ) : view === 'dashboard' ? (
+          <div className="space-y-8">
+            <header className="flex justify-between items-end">
+              <div><h1 className="text-2xl font-bold text-slate-800 truncate max-w-[200px]">สวัสดี, {user?.name.split(' ')[0]}</h1><p className="text-slate-500 text-xs">{user?.position}</p></div>
+              <button onClick={()=>setView('new')} className="bg-blue-600 text-white p-3 rounded-2xl shadow-lg active:scale-90 transition-all hover:bg-blue-700"><PlusCircle size={28} /></button>
+            </header>
+            <section className="grid grid-cols-2 gap-4">
+              {balances.map(b => <DashboardCard key={b.type} type={b.type} value={b.used} total={b.remain} onClick={() => setSelectedLeaveType(b.type)} />)}
+            </section>
+            <section>
+              <h2 className="text-xs font-bold text-slate-400 uppercase mb-4 tracking-widest">รายการลาล่าสุด</h2>
+              <div className="space-y-3">
+                {requests.length > 0 ? requests.slice(0, 3).map(req => (
+                  <div key={req.id} className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${getLeaveTheme(req.type).bg} ${getLeaveTheme(req.type).text}`}><Calendar size={18} /></div>
+                      <div><h4 className="font-bold text-xs">{req.type.split(' (')[0]}</h4><p className="text-[10px] text-slate-400">{req.startDate}</p></div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {view === 'profile' && (
-              <div className="space-y-8 text-center pt-4">
-                <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-100">
-                   <div className="w-28 h-28 bg-slate-50 rounded-[2rem] mx-auto flex items-center justify-center mb-6 shadow-inner overflow-hidden border-2 border-white">
-                    <img src={linePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.staffId}`} alt="avatar" className="rounded-full" />
+                    <StatusBadge status={req.status} />
                   </div>
-                  <h2 className="text-2xl font-bold text-slate-800">{user?.name}</h2>
-                  <p className="text-blue-600 font-bold text-xs uppercase tracking-wider mt-2 bg-blue-50 px-4 py-1.5 rounded-full inline-block">{user?.position}</p>
-                  
-                  <div className="grid grid-cols-2 gap-4 mt-8 text-left">
-                    <div className="p-4 bg-slate-50 rounded-2xl">
-                      <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">รหัสพนักงาน</p>
-                      <p className="font-bold text-slate-800 text-xs">{user?.staffId}</p>
-                    </div>
-                    <div className="p-4 bg-slate-50 rounded-2xl">
-                      <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">หน่วยงาน</p>
-                      <p className="font-bold text-slate-800 text-xs">{user?.siteId}</p>
-                    </div>
+                )) : (
+                  <div className="bg-white p-8 rounded-2xl border border-dashed border-slate-200 text-center">
+                    <p className="text-xs text-slate-400 font-medium italic">ไม่มีประวัติการลา</p>
                   </div>
-                </div>
-                <button onClick={() => setIsLoggedIn(false)} className="w-full py-4 text-rose-500 font-bold text-sm bg-white border border-rose-100 rounded-[1.5rem] shadow-sm active:scale-95 transition-all">ออกจากระบบ</button>
+                )}
               </div>
-            )}
-          </>
-        )}
+            </section>
+          </div>
+        ) : null}
       </div>
 
-      {/* Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-slate-100 px-8 py-4 flex justify-around items-center z-50 rounded-t-[2.5rem] shadow-[0_-10px_30px_rgba(0,0,0,0.03)]">
-        {[
-          { icon: Home, label: 'หน้าหลัก', view: 'dashboard' },
-          { icon: History, label: 'ประวัติ', view: 'history' },
-          ...(user?.roleType === UserRole.SUPERVISOR ? [{ icon: ShieldCheck, label: 'อนุมัติ', view: 'manager' }] : []),
-          { icon: User, label: 'บัญชี', view: 'profile' }
-        ].map((item) => (
-          <button 
-            key={item.view}
-            className={`flex flex-col items-center gap-1 transition-all ${view === item.view ? 'text-blue-600' : 'text-[#cbd5e1]'}`}
-            onClick={() => { setView(item.view); setSelectedLeaveType(null); }}
-          >
-            <item.icon size={22} strokeWidth={view === item.view ? 2.5 : 2} />
-            <span className={`text-[9px] font-bold uppercase tracking-wider ${view === item.view ? 'text-blue-600' : 'text-[#cbd5e1]'}`}>{item.label}</span>
+      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-slate-100 px-8 py-4 flex justify-around items-center z-50 rounded-t-[2.5rem] shadow-lg">
+        {[{ icon: Home, label: 'หน้าหลัก', view: 'dashboard' }, { icon: History, label: 'ประวัติ', view: 'history' }, { icon: User, label: 'บัญชี', view: 'profile' }].map(item => (
+          <button key={item.view} className={`flex flex-col items-center gap-1 transition-colors ${view === item.view ? 'text-blue-600' : 'text-slate-300 hover:text-slate-400'}`} onClick={()=>setView(item.view)}>
+            <item.icon size={22} /><span className="text-[9px] font-bold uppercase">{item.label}</span>
           </button>
         ))}
       </nav>
