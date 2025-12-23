@@ -190,7 +190,17 @@ const App: React.FC = () => {
     }
   };
 
-  if (!isLiffReady) return null; // หน้า HTML จะมี Loader dots แสดงอยู่แล้ว
+  if (!isLiffReady) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
+        <Loader2 className="animate-spin text-blue-600" size={32} />
+        <div className="text-center">
+          <p className="text-slate-800 font-bold">React Loaded</p>
+          <p className="text-slate-400 text-xs uppercase tracking-widest">Initializing LINE LIFF...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isLoggedIn) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8fafc] px-4 py-10">
@@ -211,7 +221,7 @@ const App: React.FC = () => {
                 <div className="overflow-x-auto rounded-2xl border border-slate-100">
                   <table className="w-full text-[12px]">
                     <thead className="bg-slate-50">
-                      <tr>{diagnosticInfo.headers.map((h:any, i:number)=><th key={i} className="p-3 text-left">{h}</th>)}</tr>
+                      <tr>{diagnosticInfo.headers.map((h:any, i:number)=><th key={i} className="p-3 text-left">{h} h</th>)}</tr>
                     </thead>
                     <tbody>
                       {diagnosticInfo.sampleData.map((row:any[], i:number)=>(
