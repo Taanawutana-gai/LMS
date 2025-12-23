@@ -6,7 +6,7 @@ export const MOCK_USER: UserProfile = {
   staffId: 'EMP-001',
   name: 'Somchai Jaidee',
   siteId: 'SITE-BKK-01',
-  roleType: UserRole.EMPLOYEE,
+  roleType: UserRole.FIXED,
   position: 'Senior Frontend Developer'
 };
 
@@ -15,7 +15,7 @@ export const MOCK_MANAGER: UserProfile = {
   staffId: 'MGR-005',
   name: 'Jane Doe',
   siteId: 'SITE-BKK-01',
-  roleType: UserRole.MANAGER,
+  roleType: UserRole.SUPERVISOR,
   position: 'Engineering Manager'
 };
 
@@ -33,28 +33,30 @@ export const INITIAL_BALANCES: LeaveBalance[] = [
 export const INITIAL_REQUESTS: LeaveRequest[] = [
   {
     id: 'REQ-001',
+    appliedDate: '2024-04-20',
     staffId: 'EMP-001',
     staffName: 'Somchai Jaidee',
     siteId: 'SITE-BKK-01',
     type: LeaveType.ANNUAL,
     startDate: '2024-05-10',
     endDate: '2024-05-12',
+    totalDays: 3,
     reason: 'Family vacation to Phuket',
     status: LeaveStatus.APPROVED,
-    appliedDate: '2024-04-20',
-    approverId: 'MGR-005',
+    approver: 'Jane Doe',
     approvalDate: '2024-04-21'
   },
   {
     id: 'REQ-002',
+    appliedDate: '2024-06-01',
     staffId: 'EMP-001',
     staffName: 'Somchai Jaidee',
     siteId: 'SITE-BKK-01',
     type: LeaveType.SICK,
     startDate: '2024-06-01',
     endDate: '2024-06-01',
+    totalDays: 1,
     reason: 'Food poisoning',
-    status: LeaveStatus.PENDING,
-    appliedDate: '2024-06-01'
+    status: LeaveStatus.PENDING
   }
 ];

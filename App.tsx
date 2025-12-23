@@ -32,7 +32,8 @@ import {
   RefreshCcw,
   History,
   AlertTriangle,
-  Timer
+  Timer,
+  Repeat
 } from 'lucide-react';
 import { 
   UserRole, 
@@ -76,6 +77,8 @@ const getLeaveTheme = (type: LeaveType) => {
       return { color: 'bg-purple-500', bg: 'bg-purple-50', text: 'text-purple-600', icon: Baby, label: 'ลาคลอด' };
     case LeaveType.LEAVE_WITHOUT_PAY: 
       return { color: 'bg-orange-600', bg: 'bg-orange-50', text: 'text-orange-700', icon: Wallet, label: 'ไม่รับค่าจ้าง' };
+    case LeaveType.WEEKLY_HOLIDAY_SWITCH:
+      return { color: 'bg-cyan-500', bg: 'bg-cyan-50', text: 'text-cyan-600', icon: Repeat, label: 'สลับวันหยุด' };
     case LeaveType.OTHER: 
       return { color: 'bg-fuchsia-500', bg: 'bg-fuchsia-50', text: 'text-fuchsia-600', icon: MoreHorizontal, label: 'ลาอื่นๆ' };
     default: 
@@ -127,6 +130,7 @@ interface DashboardCardProps {
 }
 
 const DashboardCard: React.FC<DashboardCardProps> = ({ type, value, total, onClick }) => {
+  const isSwitch = type === LeaveType.WEEKLY_HOLIDAY_SWITCH;
   const remaining = total - value;
   const progress = total > 0 ? (value / total) * 100 : 0;
   const theme = getLeaveTheme(type);
@@ -149,22 +153,33 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ type, value, total, onCli
           {theme.label}
         </h3>
         <div className="flex items-baseline gap-1">
-          <span className="text-2xl font-bold text-slate-800">{remaining}</span>
-          <span className="text-[10px] font-medium text-slate-400">วันคงเหลือ</span>
+          <span className="text-2xl font-bold text-slate-800">{isSwitch ? value : remaining}</span>
+          <span className="text-[10px] font-medium text-slate-400">
+            {isSwitch ? 'รายการสะสม' : 'วันคงเหลือ'}
+          </span>
         </div>
       </div>
 
       <div className="space-y-1.5">
-        <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-          <div 
-            className={`h-full ${theme.color} transition-all duration-700`} 
-            style={{ width: `${Math.min(100, progress)}%` }}
-          />
-        </div>
-        <div className="flex justify-between items-center text-[9px] font-bold text-slate-400 uppercase">
-          <span>ใช้ไป {value}</span>
-          <span>ทั้งหมด {total}</span>
-        </div>
+        {!isSwitch && (
+          <>
+            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+              <div 
+                className={`h-full ${theme.color} transition-all duration-700`} 
+                style={{ width: `${Math.min(100, progress)}%` }}
+              />
+            </div>
+            <div className="flex justify-between items-center text-[9px] font-bold text-slate-400 uppercase">
+              <span>ใช้ไป {value}</span>
+              <span>ทั้งหมด {total}</span>
+            </div>
+          </>
+        )}
+        {isSwitch && (
+           <div className="text-[9px] font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded">
+              สะสมเข้า "ลาอื่นๆ" อัตโนมัติ
+           </div>
+        )}
       </div>
     </div>
   );
@@ -248,6 +263,7 @@ const LeaveTypeDetailView = ({
 }) => {
   const filteredRequests = requests.filter(r => r.type === type && r.status !== LeaveStatus.CANCELLED);
   const theme = getLeaveTheme(type);
+  const isSwitch = type === LeaveType.WEEKLY_HOLIDAY_SWITCH;
   
   return (
     <div className="space-y-6 pb-20 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -264,30 +280,36 @@ const LeaveTypeDetailView = ({
       <section className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden">
         <div className="flex justify-between items-end mb-4">
            <div>
-              <p className="text-xs font-bold text-slate-400 uppercase mb-1">วันคงเหลือ</p>
+              <p className="text-xs font-bold text-slate-400 uppercase mb-1">
+                {isSwitch ? 'สะสมสำเร็จ' : 'วันคงเหลือ'}
+              </p>
               <h2 className="text-4xl font-bold text-slate-800">
-                {balance.total - balance.used} <span className="text-sm font-medium text-slate-400">วัน</span>
+                {isSwitch ? balance.used : (balance.total - balance.used)} <span className="text-sm font-medium text-slate-400">{isSwitch ? 'ครั้ง' : 'วัน'}</span>
               </h2>
            </div>
-           <div className="text-right">
-              <p className="text-[10px] font-bold text-slate-400 uppercase">สิทธิทั้งหมด</p>
-              <p className="text-lg font-bold text-slate-800">{balance.total} วัน</p>
-           </div>
+           {!isSwitch && (
+             <div className="text-right">
+                <p className="text-[10px] font-bold text-slate-400 uppercase">สิทธิทั้งหมด</p>
+                <p className="text-lg font-bold text-slate-800">{balance.total} วัน</p>
+             </div>
+           )}
         </div>
-        <div className="w-full bg-slate-100 rounded-full h-3 mb-2">
-          <div 
-            className={`h-3 rounded-full ${theme.color}`} 
-            style={{ width: `${balance.total > 0 ? ((balance.total - balance.used) / balance.total) * 100 : 0}%` }}
-          />
-        </div>
+        {!isSwitch && (
+          <div className="w-full bg-slate-100 rounded-full h-3 mb-2">
+            <div 
+              className={`h-3 rounded-full ${theme.color}`} 
+              style={{ width: `${balance.total > 0 ? ((balance.total - balance.used) / balance.total) * 100 : 0}%` }}
+            />
+          </div>
+        )}
         <div className="flex justify-between text-[10px] font-bold text-slate-400">
-           <span>ใช้ไปแล้ว {balance.used} วัน</span>
+           <span>{isSwitch ? 'สะสมเพื่อใช้ลาประเภทอื่น' : `ใช้ไปแล้ว ${balance.used} วัน`}</span>
            <span>รอบปี 2024</span>
         </div>
       </section>
 
       <section className="space-y-4">
-        <h3 className="text-sm font-bold text-slate-800 uppercase px-1">ประวัติการลา</h3>
+        <h3 className="text-sm font-bold text-slate-800 uppercase px-1">ประวัติการทำรายการ</h3>
         {filteredRequests.length === 0 ? (
           <div className="bg-white/50 border border-dashed border-slate-200 rounded-2xl p-10 text-center text-slate-400 text-sm">
              ไม่มีประวัติสำหรับประเภทนี้
@@ -327,7 +349,7 @@ const DashboardView = ({
   onSelectType: (type: LeaveType) => void
 }) => {
   const recentRequests = requests.filter(r => r.status !== LeaveStatus.CANCELLED).slice(0, 3);
-  const dashboardBalances = balances.filter(b => b.type !== LeaveType.WEEKLY_HOLIDAY_SWITCH);
+  const dashboardBalances = balances;
 
   return (
     <div className="space-y-6 pb-20 animate-in fade-in duration-500">
@@ -417,6 +439,7 @@ const NewRequestView = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Computed Values
+  const isSwitch = formData.type === LeaveType.WEEKLY_HOLIDAY_SWITCH;
   const requestedDays = useMemo(() => calculateDays(formData.startDate, formData.endDate), [formData.startDate, formData.endDate]);
   const advanceDays = useMemo(() => calculateAdvanceDays(formData.startDate), [formData.startDate]);
   const requiredSLA = SLA_DAYS_REQUIRED[formData.type] || 0;
@@ -425,10 +448,8 @@ const NewRequestView = ({
   const remainingDays = currentBalance ? (currentBalance.total - currentBalance.used) : 0;
   
   // Validation Logic
-  const isBalanceExceeded = requestedDays > remainingDays && formData.type !== LeaveType.WEEKLY_HOLIDAY_SWITCH && formData.type !== LeaveType.LEAVE_WITHOUT_PAY;
+  const isBalanceExceeded = !isSwitch && requestedDays > remainingDays && formData.type !== LeaveType.LEAVE_WITHOUT_PAY;
   const isSLAProblem = formData.startDate && advanceDays < requiredSLA;
-
-  const isSwitchRequest = formData.type === LeaveType.WEEKLY_HOLIDAY_SWITCH;
 
   useEffect(() => {
     if (initialData) {
@@ -480,12 +501,12 @@ const NewRequestView = ({
     <div className="space-y-6 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-300">
       <header className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">{initialData ? 'ยื่นคำขอใหม่ (จากรายการเดิม)' : 'ยื่นคำขอใหม่'}</h1>
-          <p className="text-slate-500 text-sm">สร้างคำขอลาหรือสลับวันหยุด</p>
+          <h1 className="text-2xl font-bold text-slate-800">{isSwitch ? 'ขอสลับวันหยุด' : (initialData ? 'ยื่นคำขอใหม่ (จากรายการเดิม)' : 'ยื่นคำขอใหม่')}</h1>
+          <p className="text-slate-500 text-sm">{isSwitch ? 'เพิ่มสิทธิวันหยุดทดแทน' : 'สร้างคำขอลาพักผ่อนหรือทำธุระ'}</p>
         </div>
-        {initialData && (
-          <div className="bg-amber-50 text-amber-600 p-2 rounded-xl">
-             <RefreshCcw size={20} className="animate-spin-slow" />
+        {(initialData || isSwitch) && (
+          <div className={`${isSwitch ? 'bg-cyan-50 text-cyan-600' : 'bg-amber-50 text-amber-600'} p-2 rounded-xl`}>
+             <Repeat size={20} className={isSwitch ? '' : 'animate-spin-slow'} />
           </div>
         )}
       </header>
@@ -517,10 +538,23 @@ const NewRequestView = ({
         </div>
       )}
 
+      {/* Switch Benefit Info */}
+      {isSwitch && (
+        <div className="bg-cyan-50 border border-cyan-100 p-4 rounded-2xl flex items-start gap-3">
+           <Info className="text-cyan-600 mt-1 shrink-0" size={18} />
+           <div>
+              <p className="text-xs font-bold text-cyan-800 uppercase">ข้อมูลการสลับวันหยุด</p>
+              <p className="text-[11px] text-cyan-700 leading-relaxed">
+                หากได้รับอนุมัติ จำนวนวันที่สลับจะถูกเพิ่มเข้าไปในสิทธิ <b>"ลาอื่นๆ"</b> ของคุณโดยอัตโนมัติ
+              </p>
+           </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1">
           <label className="text-xs font-bold text-slate-500 uppercase px-1 flex justify-between">
-            ประเภทการลา
+            ประเภทการลา/สลับวัน
             {requiredSLA > 0 && (
               <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded flex items-center gap-1 normal-case font-medium">
                 <Timer size={10} /> แจ้งล่วงหน้า {requiredSLA} วัน
@@ -528,7 +562,7 @@ const NewRequestView = ({
             )}
           </label>
           <select 
-            className="w-full bg-white border border-slate-200 p-4 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+            className="w-full bg-white border border-slate-200 p-4 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
             value={formData.type}
             onChange={(e) => setFormData({...formData, type: e.target.value as LeaveType})}
           >
@@ -561,28 +595,30 @@ const NewRequestView = ({
         {requestedDays > 0 && (
           <div className="px-1 flex justify-between items-center">
              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
-                <Calendar size={14} className="text-indigo-500" />
-                ครั้งนี้ลา <span className={isBalanceExceeded ? "text-rose-600 underline" : "text-indigo-600"}>{requestedDays}</span> วัน
+                <Calendar size={14} className={isSwitch ? "text-cyan-500" : "text-indigo-500"} />
+                {isSwitch ? 'สลับวันหยุดรวม' : 'ครั้งนี้ลา'} <span className={isBalanceExceeded ? "text-rose-600 underline" : (isSwitch ? "text-cyan-600" : "text-indigo-600")}>{requestedDays}</span> วัน
              </div>
-             <div className="text-[10px] font-bold text-slate-400 uppercase">
-                สิทธิคงเหลือ <span className="text-slate-700">{remainingDays}</span> วัน
-             </div>
+             {!isSwitch && (
+               <div className="text-[10px] font-bold text-slate-400 uppercase">
+                  สิทธิคงเหลือ <span className="text-slate-700">{remainingDays}</span> วัน
+               </div>
+             )}
           </div>
         )}
 
         <div className="space-y-1">
-          <label className="text-xs font-bold text-slate-500 uppercase px-1">เหตุผล</label>
+          <label className="text-xs font-bold text-slate-500 uppercase px-1">เหตุผล{isSwitch ? 'การสลับวัน' : 'การลา'}</label>
           <textarea 
             rows={3}
             className="w-full bg-white border border-slate-200 p-4 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="ระบุเหตุผลการลา..."
+            placeholder={isSwitch ? "เช่น สลับวันหยุดเพื่อมาทำงานในวันหยุดนักขัตฤกษ์..." : "ระบุเหตุผลการลา..."}
             value={formData.reason}
             onChange={(e) => setFormData({...formData, reason: e.target.value})}
           />
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs font-bold text-slate-500 uppercase px-1">หลักฐานการลา</label>
+          <label className="text-xs font-bold text-slate-500 uppercase px-1">หลักฐานเพิ่มเติม (ถ้ามี)</label>
           <div className="flex flex-col gap-3">
             {!attachment && !isUploading ? (
               <button 
@@ -663,7 +699,7 @@ const HistoryView = ({
                     {req.attachmentUrl && <ImageIcon size={14} className="text-indigo-500" />}
                   </div>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded uppercase">{req.siteId}</span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${req.type === LeaveType.WEEKLY_HOLIDAY_SWITCH ? 'bg-cyan-50 text-cyan-600' : 'bg-indigo-50 text-indigo-500'}`}>{req.siteId}</span>
                     <p className="text-[10px] text-slate-400 font-medium">ยื่นเมื่อ {req.appliedDate}</p>
                   </div>
                 </div>
@@ -673,7 +709,7 @@ const HistoryView = ({
               <div className="bg-slate-50 p-3 rounded-xl flex items-center justify-between text-[11px] font-bold text-slate-700">
                 <div className="flex items-center gap-2">
                   <Calendar size={14} className="text-indigo-500" />
-                  <span>{req.startDate} — {req.endDate}</span>
+                  <span>{req.startDate} — {req.endDate} ({req.totalDays} วัน)</span>
                 </div>
               </div>
 
@@ -681,6 +717,14 @@ const HistoryView = ({
                 <div className="bg-rose-50 border border-rose-100 p-3 rounded-xl">
                   <p className="text-[10px] font-bold text-rose-600 uppercase mb-1">เหตุผลที่ปฏิเสธ:</p>
                   <p className="text-[11px] text-rose-700 italic">"{req.approverReason}"</p>
+                  <p className="text-[9px] text-rose-400 mt-1 font-bold uppercase">โดย: {req.approver}</p>
+                </div>
+              )}
+
+              {req.status === LeaveStatus.APPROVED && (
+                <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-xl">
+                  <p className="text-[9px] text-emerald-600 font-bold uppercase">อนุมัติโดย: {req.approver}</p>
+                  <p className="text-[9px] text-emerald-400">เมื่อวันที่: {req.approvalDate}</p>
                 </div>
               )}
 
@@ -727,7 +771,7 @@ const ManagerView = ({
   return (
     <div className="space-y-6 pb-20 animate-in fade-in duration-300">
       <header>
-        <h1 className="text-2xl font-bold text-slate-800">อนุมัติคำขอ</h1>
+        <h1 className="text-2xl font-bold text-slate-800">อนุมัติคำขอ (Supervisor)</h1>
         <p className="text-slate-500 text-sm">รายการรอดำเนินการ</p>
       </header>
       <div className="space-y-4">
@@ -752,11 +796,11 @@ const ManagerView = ({
               <div className="bg-slate-50 p-4 rounded-2xl space-y-2 text-xs">
                  <div className="flex justify-between font-bold">
                     <span className="text-slate-400 uppercase text-[9px]">ประเภท:</span>
-                    <span className="text-indigo-600">{req.type.split(' (')[0]}</span>
+                    <span className={req.type === LeaveType.WEEKLY_HOLIDAY_SWITCH ? "text-cyan-600" : "text-indigo-600"}>{req.type.split(' (')[0]}</span>
                  </div>
                  <div className="flex justify-between font-bold">
                     <span className="text-slate-400 uppercase text-[9px]">ระยะเวลา:</span>
-                    <span>{req.startDate} ถึง {req.endDate}</span>
+                    <span>{req.startDate} ถึง {req.endDate} ({req.totalDays} วัน)</span>
                  </div>
                  <p className="text-slate-600 mt-2 italic">"{req.reason}"</p>
               </div>
@@ -811,24 +855,26 @@ const App: React.FC = () => {
   const [prefillData, setPrefillData] = useState<Partial<LeaveRequest> | undefined>(undefined);
 
   const toggleRole = () => {
-    setUser(user.roleType === UserRole.EMPLOYEE ? MOCK_MANAGER : MOCK_USER);
+    setUser(user.roleType === UserRole.FIXED ? MOCK_MANAGER : MOCK_USER);
     setView('dashboard');
     setSelectedLeaveType(null);
   };
 
   const handleCreateRequest = (data: Partial<LeaveRequest>) => {
+    const days = calculateDays(data.startDate || '', data.endDate || '');
     const newRequest: LeaveRequest = {
       id: `REQ-${Math.floor(Math.random() * 1000)}`,
+      appliedDate: new Date().toISOString().split('T')[0], // Column 1
       staffId: user.staffId,
       staffName: user.name,
       siteId: user.siteId,
       type: data.type || LeaveType.ANNUAL,
       startDate: data.startDate || '',
       endDate: data.endDate || '',
+      totalDays: days, // Column 9
       reason: data.reason || '',
       status: LeaveStatus.PENDING,
       attachmentUrl: data.attachmentUrl,
-      appliedDate: new Date().toISOString().split('T')[0],
     };
     setRequests([newRequest, ...requests]);
     setPrefillData(undefined);
@@ -856,14 +902,30 @@ const App: React.FC = () => {
 
     if (status === LeaveStatus.APPROVED) {
       if (target.type === LeaveType.WEEKLY_HOLIDAY_SWITCH) {
-        setBalances(prev => prev.map(b => b.type === LeaveType.WEEKLY_HOLIDAY_SWITCH ? { ...b, total: b.total + 1 } : b));
+        // เมื่ออนุมัติสลับวันหยุด: 
+        // 1. เพิ่มยอดสะสมใน 'การขอสลับวันหยุด' (Column 14) 
+        // 2. เพิ่มจำนวนวันคงเหลือใน 'ลาอื่นๆ' (Column 16) ผ่านการเพิ่ม total
+        setBalances(prev => prev.map(b => {
+          if (b.type === LeaveType.WEEKLY_HOLIDAY_SWITCH) {
+            return { ...b, used: b.used + 1 }; // เพิ่มจำนวนครั้งที่สลับสำเร็จ
+          }
+          if (b.type === LeaveType.OTHER) {
+            return { ...b, total: b.total + target.totalDays }; // เพิ่มสิทธิในลาอื่นๆ
+          }
+          return b;
+        }));
       } else {
-        const days = calculateDays(target.startDate, target.endDate);
-        setBalances(prev => prev.map(b => b.type === target.type ? { ...b, used: b.used + days } : b));
+        setBalances(prev => prev.map(b => b.type === target.type ? { ...b, used: b.used + target.totalDays } : b));
       }
     }
 
-    setRequests(requests.map(r => r.id === id ? { ...r, status, approverReason: reason, approvalDate: new Date().toISOString().split('T')[0] } : r));
+    setRequests(requests.map(r => r.id === id ? { 
+      ...r, 
+      status, 
+      approver: user.name, // Column 13 (Manager's name)
+      approverReason: reason, 
+      approvalDate: new Date().toISOString().split('T')[0] 
+    } : r));
   };
 
   if (!isLoggedIn) return <LoginView onLogin={() => setIsLoggedIn(true)} />;
@@ -926,7 +988,7 @@ const App: React.FC = () => {
         {[
           { icon: Home, label: 'หน้าแรก', view: 'dashboard' },
           { icon: History, label: 'ประวัติ', view: 'history' },
-          ...(user.roleType === UserRole.MANAGER ? [{ icon: ShieldCheck, label: 'อนุมัติ', view: 'manager' }] : []),
+          ...(user.roleType === UserRole.SUPERVISOR ? [{ icon: ShieldCheck, label: 'อนุมัติ', view: 'manager' }] : []),
           { icon: User, label: 'โปรไฟล์', view: 'profile' }
         ].map((item) => (
           <button 
