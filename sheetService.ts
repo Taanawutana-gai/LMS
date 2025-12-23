@@ -1,51 +1,81 @@
 
 import { UserProfile, LeaveRequest, RawLeaveBalance, LeaveStatus } from './types';
-import { MOCK_USER, INITIAL_BALANCES, INITIAL_REQUESTS } from './mockData';
 
+// ลิงก์ชีตของคุณ: https://docs.google.com/spreadsheets/d/1q9elvW0_-OkAi8vBwHg38579Z1ozCgeEC27fnLaYBtk/
 const SHEET_ID = '1q9elvW0_-OkAi8vBwHg38579Z1ozCgeEC27fnLaYBtk';
-// ใส่ URL ที่ได้จากการ Deploy Google Apps Script ของคุณที่นี่
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzz6XW4Y-G0O4X_9S9m_oQyqC6uXf-Z0_hX-P0_R-N-C/exec'; 
 
-const isConfigured = () => SCRIPT_URL && !SCRIPT_URL.includes('YOUR_DEPLOYED_SCRIPT_ID');
+// URL ที่ได้จากการ Deploy Google Apps Script (ต้องทำการ Deploy เป็น Web App และตั้งค่าสิทธิ์เป็น 'Anyone')
+// สำคัญ: หลังจากก๊อบปี้โค้ดใน GOOGLE_APPS_SCRIPT.js ไปวางและ Deploy แล้ว ให้นำ URL มาวางที่นี่
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwW37g7b1zvDtXZIA46suTuby9BVvGBy0gLIlZT_0yqE7h7Cdw0n6YGnIKoaO4jfQr5Vw/exec'; 
 
+/**
+ * บริการเชื่อมต่อกับ Google Sheets ผ่าน Web App Script
+ */
 export const SheetService = {
+  /**
+   * ทดสอบการเชื่อมต่อและดึงข้อมูลจาก Employ_DB
+   */
+  async testConnection(): Promise<any> {
+    try {
+      const response = await fetch(`${SCRIPT_URL}?action=testConnection&sheetId=${SHEET_ID}`);
+      if (!response.ok) throw new Error('Network response was not ok');
+      return await response.json();
+    } catch (error) {
+      console.error('SheetService Error (testConnection):', error);
+      return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  },
+
+  /**
+   * ตรวจสอบสิทธิ์และดึงข้อมูลโปรไฟล์จาก Employee_DB
+   */
   async getProfile(staffId: string): Promise<UserProfile | null> {
-    if (!isConfigured()) return staffId === MOCK_USER.staffId ? MOCK_USER : (staffId === 'MGR-005' ? (await import('./mockData')).MOCK_MANAGER : null);
     try {
       const response = await fetch(`${SCRIPT_URL}?action=getProfile&staffId=${staffId}&sheetId=${SHEET_ID}`);
+      if (!response.ok) throw new Error('Network response was not ok');
       const data = await response.json();
       return data.success ? data.profile : null;
     } catch (error) {
-      console.warn('SheetService Error (getProfile): Returning mock');
-      return staffId === MOCK_USER.staffId ? MOCK_USER : null;
+      console.error('SheetService Error (getProfile):', error);
+      return null;
     }
   },
 
+  /**
+   * ดึงข้อมูลยอดคงเหลือการลาจาก Leave_Balances
+   */
   async getBalances(staffId: string): Promise<RawLeaveBalance | null> {
-    if (!isConfigured()) return { staffId, name: 'Demo User', siteId: 'SITE-01', balances: INITIAL_BALANCES, switchCount: 0 };
     try {
       const response = await fetch(`${SCRIPT_URL}?action=getBalances&staffId=${staffId}&sheetId=${SHEET_ID}`);
+      if (!response.ok) throw new Error('Network response was not ok');
       const data = await response.json();
       return data.success ? data.data : null;
     } catch (error) {
-      return { staffId, name: 'Demo User', siteId: 'SITE-01', balances: INITIAL_BALANCES, switchCount: 0 };
+      console.error('SheetService Error (getBalances):', error);
+      return null;
     }
   },
 
+  /**
+   * ดึงประวัติรายการลาจาก Leave_Requests
+   */
   async getRequests(staffId?: string, isManager?: boolean): Promise<LeaveRequest[]> {
-    if (!isConfigured()) return INITIAL_REQUESTS;
     try {
       const query = isManager ? `action=getAllRequests` : `action=getRequests&staffId=${staffId}`;
       const response = await fetch(`${SCRIPT_URL}?${query}&sheetId=${SHEET_ID}`);
+      if (!response.ok) throw new Error('Network response was not ok');
       const data = await response.json();
       return data.success ? data.requests : [];
     } catch (error) {
-      return INITIAL_REQUESTS;
+      console.error('SheetService Error (getRequests):', error);
+      return [];
     }
   },
 
+  /**
+   * บันทึกคำขอลาใหม่ลงใน Leave_Requests
+   */
   async submitRequest(request: Partial<LeaveRequest>): Promise<{ success: boolean; id?: string }> {
-    if (!isConfigured()) return { success: true, id: 'DEMO-' + Date.now() };
     try {
       const response = await fetch(SCRIPT_URL, {
         method: 'POST',
@@ -57,14 +87,18 @@ export const SheetService = {
           ...request
         })
       });
+      if (!response.ok) throw new Error('Network response was not ok');
       return await response.json();
     } catch (error) {
+      console.error('SheetService Error (submitRequest):', error);
       return { success: false };
     }
   },
 
+  /**
+   * อัปเดตสถานะการลา (อนุมัติ/ปฏิเสธ)
+   */
   async updateRequestStatus(requestId: string, status: LeaveStatus, approver?: string, reason?: string): Promise<boolean> {
-    if (!isConfigured()) return true;
     try {
       const response = await fetch(SCRIPT_URL, {
         method: 'POST',
@@ -79,9 +113,11 @@ export const SheetService = {
           reason
         })
       });
+      if (!response.ok) throw new Error('Network response was not ok');
       const data = await response.json();
       return data.success;
     } catch (error) {
+      console.error('SheetService Error (updateStatus):', error);
       return false;
     }
   }

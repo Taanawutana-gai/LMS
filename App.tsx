@@ -23,7 +23,9 @@ import {
   History,
   Repeat,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Database,
+  TableProperties
 } from 'lucide-react';
 import { 
   UserRole, 
@@ -144,10 +146,20 @@ const App: React.FC = () => {
   const [lineUserId, setLineUserId] = useState('Wait for LIFF...');
   const [linePicture, setLinePicture] = useState('');
 
+  // Diagnostic State
+  const [diagnosticInfo, setDiagnosticInfo] = useState<any>(null);
+  const [isDiagnosticOpen, setIsDiagnosticOpen] = useState(false);
+
   // LIFF Initialization
   useEffect(() => {
     const initLiff = async () => {
       try {
+        // @ts-ignore
+        if (typeof liff === 'undefined') {
+          console.error('LIFF SDK not found');
+          setLineUserId('SDK_NOT_LOADED');
+          return;
+        }
         // @ts-ignore
         await liff.init({ liffId: LIFF_ID });
         // @ts-ignore
@@ -162,7 +174,7 @@ const App: React.FC = () => {
         }
       } catch (err) {
         console.error('LIFF Init failed', err);
-        setLineUserId('LINE_MOCK_USER_ID');
+        setLineUserId('LINE_ERROR');
       }
     };
     initLiff();
@@ -181,14 +193,22 @@ const App: React.FC = () => {
         setRequests(reqs);
         setIsLoggedIn(true);
       } else {
-        alert('ไม่พบรหัสพนักงานในระบบ (Employee_DB)');
+        alert('ไม่พบรหัสพนักงานในฐานข้อมูลระบบ (Employee_DB) กรุณาตรวจสอบรหัสอีกครั้ง');
       }
     } catch (err) {
       console.error(err);
-      alert('เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่');
+      alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับ Google Sheets');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTestConnection = async () => {
+    setLoading(true);
+    const result = await SheetService.testConnection();
+    setDiagnosticInfo(result);
+    setIsDiagnosticOpen(true);
+    setLoading(false);
   };
 
   const syncData = async (staffId: string) => {
@@ -229,7 +249,7 @@ const App: React.FC = () => {
         await syncData(user.staffId);
         setView('dashboard');
       } else {
-        alert('ไม่สามารถส่งคำขอได้ กรุณาลองใหม่');
+        alert('ไม่สามารถส่งคำขอได้ เนื่องจากข้อผิดพลาดของระบบ');
       }
     } catch (e) {
       console.error(e);
@@ -248,7 +268,7 @@ const App: React.FC = () => {
       if (success) {
         await syncData(user.staffId);
       } else {
-        alert('การดำเนินการไม่สำเร็จ');
+        alert('การดำเนินการล้มเหลว');
       }
     } catch (err) {
       console.error(err);
@@ -258,7 +278,109 @@ const App: React.FC = () => {
   };
 
   if (!isLoggedIn) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8fafc] px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8fafc] px-4 py-10">
+      {/* Diagnostic Modal (Enhanced for Employee Database View) */}
+      {isDiagnosticOpen && (
+        <div className="fixed inset-0 z-[110] bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl p-6 sm:p-10 max-h-[90vh] overflow-hidden flex flex-col relative animate-in zoom-in duration-300">
+            <button onClick={() => setIsDiagnosticOpen(false)} className="absolute top-8 right-8 p-2 hover:bg-slate-100 rounded-full transition-colors">
+              <X size={24} className="text-slate-400" />
+            </button>
+            
+            <div className="flex items-center gap-4 mb-8">
+              <div className="p-4 bg-blue-600 text-white rounded-[1.25rem] shadow-lg shadow-blue-100">
+                <TableProperties size={28} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-slate-800">ฐานข้อมูลพนักงาน (Employ_DB)</h2>
+                <p className="text-slate-400 text-sm font-medium">รายละเอียดข้อมูลการเชื่อมต่อปัจจุบัน</p>
+              </div>
+            </div>
+            
+            {diagnosticInfo?.success ? (
+              <div className="flex-1 overflow-y-auto space-y-8 pr-2 custom-scrollbar">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-5 bg-blue-50/50 border border-blue-100 rounded-3xl">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                      <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.15em]">Connection Status</p>
+                    </div>
+                    <p className="text-lg font-bold text-slate-800">เชื่อมต่อสำเร็จ</p>
+                  </div>
+                  <div className="p-5 bg-slate-50 border border-slate-100 rounded-3xl">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-2">Total Records Found</p>
+                    <p className="text-lg font-bold text-slate-800">{diagnosticInfo.rowCount - 1} พนักงาน</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between px-2">
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">ข้อมูลตัวอย่าง (Employee List)</h3>
+                    <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-md">Showing top 5</span>
+                  </div>
+                  
+                  <div className="overflow-x-auto rounded-[1.5rem] border border-slate-100 shadow-sm">
+                    <table className="w-full text-left border-collapse min-w-[600px]">
+                      <thead>
+                        <tr className="bg-slate-50/80 border-b border-slate-100">
+                          {diagnosticInfo.headers.map((h: string, i: number) => (
+                            <th key={i} className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-wider">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {diagnosticInfo.sampleData.map((row: any[], i: number) => (
+                          <tr key={i} className="border-b border-slate-50 hover:bg-blue-50/20 transition-colors last:border-none">
+                            {row.map((cell: any, j: number) => (
+                              <td key={j} className="p-4 text-[12px] font-semibold text-slate-700">
+                                {j === 4 ? (
+                                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${cell === 'Supervisor' ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-500'}`}>
+                                    {String(cell)}
+                                  </span>
+                                ) : String(cell)}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="p-5 bg-amber-50 border border-amber-100 rounded-3xl flex gap-4 items-start">
+                  <Info className="text-amber-500 shrink-0 mt-0.5" size={18} />
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-amber-800">คำแนะนำการใช้งาน</p>
+                    <p className="text-[11px] text-amber-700/80 leading-relaxed">ข้อมูลที่แสดงข้างต้นเป็นข้อมูลทดสอบการเชื่อมต่อจาก Google Sheets หากท่านไม่พบข้อมูลของตนเอง กรุณาติดต่อฝ่ายบุคคลเพื่อลงทะเบียนรหัสพนักงานเข้าสู่ระบบ Employ_DB</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-8 bg-rose-50 border border-rose-100 rounded-[2.5rem] text-center space-y-4">
+                <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <AlertCircle size={32} className="text-rose-500" />
+                </div>
+                <h3 className="text-lg font-bold text-rose-800">การเชื่อมต่อผิดพลาด</h3>
+                <div className="text-left bg-white p-6 rounded-2xl border border-rose-100 space-y-3">
+                  <p className="text-[11px] font-bold text-rose-400 uppercase">Error Message:</p>
+                  <code className="block text-[10px] bg-slate-50 p-3 rounded-lg text-rose-600 break-all">{diagnosticInfo?.message || 'Network Error'}</code>
+                  <p className="text-[11px] font-bold text-slate-500 mt-4 leading-relaxed italic">
+                    *โปรดตรวจสอบว่าได้ทำการ "Deploy as Web App" ใน Google Apps Script โดยตั้งค่า Who has access เป็น "Anyone" แล้วหรือไม่
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            <button 
+              onClick={() => setIsDiagnosticOpen(false)}
+              className="w-full mt-8 py-[1.25rem] bg-slate-900 text-white font-bold rounded-2xl active:scale-95 transition-all shadow-xl shadow-slate-200"
+            >
+              รับทราบ
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* GeoClock Login Card */}
       <div className="w-full max-w-[400px] bg-white rounded-[40px] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.08)] px-10 py-12 relative flex flex-col items-center">
         
@@ -282,7 +404,7 @@ const App: React.FC = () => {
 
         {/* Title Section */}
         <h1 className="text-[42px] font-bold text-[#1e293b] tracking-tight leading-none">GeoClock</h1>
-        <p className="text-[#94a3b8] text-[15.5px] font-medium mt-1.5 mb-14">Secure Attendance System</p>
+        <p className="text-[#94a3b8] text-[15.5px] font-medium mt-1.5 mb-10">Secure Attendance System</p>
 
         {/* Form Fields */}
         <div className="w-full space-y-7">
@@ -312,14 +434,23 @@ const App: React.FC = () => {
           <button 
             onClick={handleLogin}
             disabled={loading || !staffIdInput}
-            className="w-full bg-[#2563eb] text-white font-bold py-[21px] rounded-[1.25rem] shadow-[0_16px_36px_-6px_rgba(37,99,235,0.4)] hover:bg-[#1d4ed8] active:scale-[0.97] transition-all mt-6 flex items-center justify-center text-[18px] tracking-wide"
+            className="w-full bg-[#2563eb] text-white font-bold py-[21px] rounded-[1.25rem] shadow-[0_16px_36px_-6px_rgba(37,99,235,0.4)] hover:bg-[#1d4ed8] active:scale-[0.97] transition-all mt-4 flex items-center justify-center text-[18px] tracking-wide"
           >
             {loading ? <Loader2 className="animate-spin" size={26} /> : 'Log In'}
+          </button>
+
+          {/* Diagnostic Button - Improved Label */}
+          <button 
+            onClick={handleTestConnection}
+            className="w-full flex items-center justify-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-blue-500 transition-colors py-2 active:scale-95"
+          >
+            <Database size={14} />
+            ตรวจสอบฐานข้อมูลพนักงาน
           </button>
         </div>
 
         {/* Footer Brand */}
-        <div className="mt-16 text-[10px] font-bold text-[#cbd5e1] uppercase tracking-[0.28em] text-center">
+        <div className="mt-12 text-[10px] font-bold text-[#cbd5e1] uppercase tracking-[0.28em] text-center">
           MANAGEMENT BY SMC PROPERTY SOFT
         </div>
       </div>
