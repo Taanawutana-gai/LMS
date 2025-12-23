@@ -1,71 +1,33 @@
-
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LMS Online</title>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GeoClock AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; background-color: #f8fafc; }
-        #root:empty {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-        }
-        .loader-dots { display: flex; gap: 4px; margin-top: 10px; }
-        .dot { width: 8px; height: 8px; background: #3b82f6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out; }
-        .dot:nth-child(1) { animation-delay: -0.32s; }
-        .dot:nth-child(2) { animation-delay: -0.16s; }
-        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
-        
-        #error-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.95);
-            z-index: 9999; padding: 20px; color: #e11d48;
-            font-family: monospace; overflow: auto;
-        }
+      body {
+        background-color: #f8fafc; /* slate-50 */
+        -webkit-font-smoothing: antialiased;
+      }
     </style>
-    <script type="importmap">
+  <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@19.0.0",
-    "react-dom": "https://esm.sh/react-dom@19.0.0",
-    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client?external=react",
-    "lucide-react": "https://esm.sh/lucide-react@0.462.0?external=react",
-    "@google/genai": "https://esm.sh/@google/genai@1.3.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/"
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "uuid": "https://aistudiocdn.com/uuid@^13.0.0",
+    "recharts": "https://aistudiocdn.com/recharts@^3.4.1",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.0/client",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
   }
 }
 </script>
-    <script>
-        // Catch and display initialization errors
-        window.onerror = function(msg, url, lineNo, columnNo, error) {
-            const overlay = document.getElementById('error-overlay');
-            if (overlay) {
-                overlay.style.display = 'block';
-                overlay.innerHTML += '<div style="margin-bottom:10px; border-bottom:1px solid #fee2e2; padding-bottom:8px;">' +
-                    '<b>Runtime Error:</b> ' + msg + '<br>' +
-                    '<small style="color:#64748b;">' + url + ' (Line: ' + lineNo + ')</small></div>';
-            }
-            return false;
-        };
-    </script>
 </head>
-<body>
-    <div id="error-overlay"><h3>Application Runtime Error</h3><hr><br></div>
-    <div id="root">
-        <div class="text-slate-400 font-bold text-sm tracking-widest uppercase">Initializing App</div>
-        <div class="loader-dots">
-            <div class="dot"></div><div class="dot"></div><div class="dot"></div>
-        </div>
-    </div>
-</body>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
+  </body>
 </html>
