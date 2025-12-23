@@ -246,7 +246,7 @@ const App: React.FC = () => {
             )}
 
             <button onClick={handleLogin} disabled={loading} className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs mt-2">
-              {loading ? <Loader2 className="animate-spin" /> : 'ตรวจสอบข้อมูลและยืนยัน'}
+              {loading ? <Loader2 className="animate-spin" /> : 'LOGIN'}
             </button>
             <p className="text-center text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-2">SMC Property Soft</p>
           </div>
