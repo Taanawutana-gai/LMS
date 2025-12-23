@@ -1,9 +1,6 @@
-
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App.tsx';
-
-console.log("App Initialization: Root rendering started.");
+import * as React from 'react';
+import * as ReactDOM from 'react-dom/client';
+import App from './App';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
