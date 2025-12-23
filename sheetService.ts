@@ -2,7 +2,7 @@
 import { UserProfile, LeaveRequest, RawLeaveBalance, LeaveStatus } from './types.ts';
 
 const SHEET_ID = '1q9elvW0_-OkAi8vBwHg38579Z1ozCgeEC27fnLaYBtk';
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxUKBaGGXiNJS0SYUCMXK58tOFXXzb-dBSGQKwDzEcU5yhxifSHB5_KgNA3GHjRhYtmDg/exec'; 
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxQgB1GP-KJYwRjFN5-M29-N5y0Du2LxI3ddqhD_fRgPRTRfp4ebHP5C8oE9e9jX1Dw7A/exec'; 
 
 export const SheetService = {
   async testConnection(): Promise<any> {
@@ -37,6 +37,22 @@ export const SheetService = {
     } catch (error) {
       console.error('GetProfile Error:', error);
       throw error;
+    }
+  },
+
+  async linkLineId(staffId: string, lineUserId: string): Promise<boolean> {
+    try {
+      const response = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        redirect: 'follow',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'linkLineId', sheetId: SHEET_ID, staffId, lineUserId })
+      });
+      const data = await response.json();
+      return data.success;
+    } catch (error) {
+      console.error('LinkLineId Error:', error);
+      return false;
     }
   },
 

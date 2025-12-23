@@ -188,8 +188,17 @@ const App: React.FC = () => {
     if (!staffIdInput) return;
     setLoading(true);
     try {
+      // 1. Check if profile exists by Staff ID
       const profile = await SheetService.getProfile(staffIdInput);
       if (profile) {
+        // 2. Link current LINE ID to this Staff ID to enable future auto-login
+        if (lineUserId) {
+          const linked = await SheetService.linkLineId(staffIdInput, lineUserId);
+          if (linked) {
+            profile.lineUserId = lineUserId;
+          }
+        }
+        
         setUser(profile);
         await fetchUserData(profile);
         setIsLoggedIn(true);
@@ -285,7 +294,7 @@ const App: React.FC = () => {
       <div className="h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
         <Loader2 className="animate-spin text-blue-600" size={32} />
         <div className="text-center">
-          <p className="text-slate-800 font-bold tracking-tight">GeoClock Online</p>
+          <p className="text-slate-800 font-bold tracking-tight">LMS Online</p>
           <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold">Initializing System...</p>
         </div>
       </div>
@@ -374,7 +383,7 @@ const App: React.FC = () => {
       {/* Footer Version */}
       <div className="mt-8 flex items-center justify-center gap-2 text-slate-300">
         <ShieldCheck size={14} />
-        <span className="text-[10px] font-bold uppercase tracking-widest">Powered by GeoClock v2.5</span>
+        <span className="text-[10px] font-bold uppercase tracking-widest">Powered by LMS v2.5</span>
       </div>
     </div>
   );
@@ -385,7 +394,7 @@ const App: React.FC = () => {
       <div className="px-6 py-4 flex justify-between items-center bg-white border-b border-slate-100 sticky top-0 z-50">
         <div className="flex items-center gap-3">
            <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-sm"><Clock size={20} /></div>
-           <div><span className="block font-bold text-slate-800 text-sm leading-tight uppercase tracking-tight">GeoClock</span><span className="text-[10px] text-blue-500 font-bold uppercase tracking-widest">{user?.siteId}</span></div>
+           <div><span className="block font-bold text-slate-800 text-sm leading-tight uppercase tracking-tight">LMS</span><span className="text-[10px] text-blue-500 font-bold uppercase tracking-widest">{user?.siteId}</span></div>
         </div>
         <div className="flex items-center gap-2">
           {loading && <Loader2 className="animate-spin text-blue-600" size={18} />}

@@ -147,6 +147,17 @@ function doPost(e) {
       return jsonResponse(processAddRequest(ss, body));
     }
 
+    if (action === 'linkLineId') {
+      const sheet = ss.getSheetByName('Employ_DB');
+      const data = sheet.getDataRange().getValues();
+      const rowIndex = data.findIndex(row => row[1] == body.staffId);
+      if (rowIndex !== -1) {
+        sheet.getRange(rowIndex + 1, 1).setValue(body.lineUserId);
+        return jsonResponse({ success: true });
+      }
+      return jsonResponse({ success: false, message: 'Staff ID not found' });
+    }
+
     if (action === 'updateStatus') {
       const sheet = ss.getSheetByName('Leave_Requests');
       const data = sheet.getDataRange().getValues();
