@@ -23,6 +23,11 @@ export const INITIAL_BALANCES: LeaveBalance[] = [
   { type: LeaveType.ANNUAL, total: 15, used: 3 },
   { type: LeaveType.SICK, total: 30, used: 2 },
   { type: LeaveType.PERSONAL, total: 6, used: 1 },
+  { type: LeaveType.PUBLIC_HOLIDAY, total: 13, used: 0 },
+  { type: LeaveType.MATERNITY, total: 98, used: 0 },
+  { type: LeaveType.LEAVE_WITHOUT_PAY, total: 30, used: 0 },
+  { type: LeaveType.WEEKLY_HOLIDAY_SWITCH, total: 0, used: 0 },
+  { type: LeaveType.OTHER, total: 5, used: 0 },
 ];
 
 export const INITIAL_REQUESTS: LeaveRequest[] = [
@@ -30,6 +35,7 @@ export const INITIAL_REQUESTS: LeaveRequest[] = [
     id: 'REQ-001',
     staffId: 'EMP-001',
     staffName: 'Somchai Jaidee',
+    siteId: 'SITE-BKK-01',
     type: LeaveType.ANNUAL,
     startDate: '2024-05-10',
     endDate: '2024-05-12',
@@ -43,6 +49,7 @@ export const INITIAL_REQUESTS: LeaveRequest[] = [
     id: 'REQ-002',
     staffId: 'EMP-001',
     staffName: 'Somchai Jaidee',
+    siteId: 'SITE-BKK-01',
     type: LeaveType.SICK,
     startDate: '2024-06-01',
     endDate: '2024-06-01',

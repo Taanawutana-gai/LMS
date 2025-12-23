@@ -1,16 +1,20 @@
 
 export enum LeaveType {
-  SICK = 'Sick Leave',
-  ANNUAL = 'Annual Leave',
-  PERSONAL = 'Personal Leave',
-  MATERNITY = 'Maternity Leave',
-  OTHER = 'Other'
+  SICK = 'ลาป่วย (Sick Leave)',
+  ANNUAL = 'ลาพักร้อน (Annual Leave)',
+  PERSONAL = 'ลากิจ (Personal Leave)',
+  MATERNITY = 'ลาคลอด (Maternity Leave)',
+  PUBLIC_HOLIDAY = 'วันหยุดนักขัตฤกษ์ (Public Holiday)',
+  LEAVE_WITHOUT_PAY = 'ลาไม่รับเงินเดือน (Leave Without Pay)',
+  WEEKLY_HOLIDAY_SWITCH = 'สลับวันหยุดประจำสัปดาห์ (Weekly Holiday Switch)',
+  OTHER = 'ลาอื่นๆ (Other Leave)'
 }
 
 export enum LeaveStatus {
   PENDING = 'Pending',
   APPROVED = 'Approved',
-  REJECTED = 'Rejected'
+  REJECTED = 'Rejected',
+  CANCELLED = 'Cancelled'
 }
 
 export enum UserRole {
@@ -38,6 +42,7 @@ export interface LeaveRequest {
   id: string;
   staffId: string;
   staffName: string;
+  siteId: string;
   type: LeaveType;
   startDate: string;
   endDate: string;
