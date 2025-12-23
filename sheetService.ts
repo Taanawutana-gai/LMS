@@ -1,5 +1,5 @@
 
-import { UserProfile, LeaveRequest, RawLeaveBalance, LeaveStatus } from './types';
+import { UserProfile, LeaveRequest, RawLeaveBalance, LeaveStatus } from './types.ts';
 
 const SHEET_ID = '1q9elvW0_-OkAi8vBwHg38579Z1ozCgeEC27fnLaYBtk';
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwW37g7b1zvDtXZIA46suTuby9BVvGBy0gLIlZT_0yqE7h7Cdw0n6YGnIKoaO4jfQr5Vw/exec'; 
