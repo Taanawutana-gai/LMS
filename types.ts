@@ -37,24 +37,22 @@ export interface UserProfile {
 
 /**
  * Interface mapping to Google Sheet: Leave_Balances (Horizontal Style - 18 Columns)
- * 1 row per employee
- * 
- * Column 1 (A):  staffId (Key)
- * Column 2 (B):  name (ชื่อพนักงาน)
- * Column 3 (C):  siteId (รหัสไซต์งาน)
- * Column 4 (D):  ลาพักร้อนused       | Column 5 (E):  ลาพักร้อน_remain
- * Column 6 (F):  ลาป่วยL_used       | Column 7 (G):  ลาป่วยL_remain
- * Column 8 (H):  ลากิจ_used         | Column 9 (I):  ลากิจ_remain
- * Column 10 (J): ลาคลอด_used        | Column 11 (K): ลาคลอด_remain
- * Column 12 (L): วันหยุดนักขัตฤกษ์_used | Column 13 (M): วันหยุดนักขัตฤกษ์_remain
- * Column 14 (N): ลาไม่รับเงินเดือน_used | Column 15 (O): ลาไม่รับเงินเดือน_remain
- * Column 16 (P): การขอสลับวันหยุด (Counter - Adds to Column R when approved)
- * Column 17 (Q): ลาอื่นๆ_used        | Column 18 (R): ลาอื่นๆ_remain (Base + Approved Switches)
  */
 export interface LeaveBalance {
   type: LeaveType;
-  total: number; // This maps to the _remain or total based on type logic
-  used: number;  // This maps to the _used column
+  remain: number; // Maps to the _remain column (e.g. Column 5, 7, 9...)
+  used: number;   // Maps to the _used column (e.g. Column 4, 6, 8...)
+}
+
+/**
+ * Internal state for raw sheet data
+ */
+export interface RawLeaveBalance {
+  staffId: string;
+  name: string;
+  siteId: string;
+  balances: LeaveBalance[];
+  switchCount: number; // Column 16 (P)
 }
 
 /**

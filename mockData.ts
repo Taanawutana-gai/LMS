@@ -19,15 +19,16 @@ export const MOCK_MANAGER: UserProfile = {
   position: 'Engineering Manager'
 };
 
+// Fix: Changed 'total' property to 'remain' to match LeaveBalance interface defined in types.ts
 export const INITIAL_BALANCES: LeaveBalance[] = [
-  { type: LeaveType.ANNUAL, total: 15, used: 3 },
-  { type: LeaveType.SICK, total: 30, used: 2 },
-  { type: LeaveType.PERSONAL, total: 6, used: 1 },
-  { type: LeaveType.PUBLIC_HOLIDAY, total: 13, used: 0 },
-  { type: LeaveType.MATERNITY, total: 98, used: 0 },
-  { type: LeaveType.LEAVE_WITHOUT_PAY, total: 30, used: 0 },
-  { type: LeaveType.WEEKLY_HOLIDAY_SWITCH, total: 0, used: 0 },
-  { type: LeaveType.OTHER, total: 5, used: 0 },
+  { type: LeaveType.ANNUAL, remain: 15, used: 3 },
+  { type: LeaveType.SICK, remain: 30, used: 2 },
+  { type: LeaveType.PERSONAL, remain: 6, used: 1 },
+  { type: LeaveType.PUBLIC_HOLIDAY, remain: 13, used: 0 },
+  { type: LeaveType.MATERNITY, remain: 98, used: 0 },
+  { type: LeaveType.LEAVE_WITHOUT_PAY, remain: 30, used: 0 },
+  { type: LeaveType.WEEKLY_HOLIDAY_SWITCH, remain: 0, used: 0 },
+  { type: LeaveType.OTHER, remain: 5, used: 0 },
 ];
 
 export const INITIAL_REQUESTS: LeaveRequest[] = [

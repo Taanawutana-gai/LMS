@@ -1,24 +1,16 @@
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Calendar, 
-  ClipboardList, 
   Home, 
   PlusCircle, 
   User, 
-  CheckCircle2, 
   ChevronRight, 
   ShieldCheck, 
-  AlertCircle, 
   Clock, 
-  MapPin, 
-  Camera, 
   X, 
-  Image as ImageIcon, 
-  Eye, 
   ChevronLeft, 
   Info, 
-  Sparkles, 
   Palmtree, 
   Thermometer, 
   UserCheck, 
@@ -26,14 +18,12 @@ import {
   Flag, 
   Wallet, 
   MoreHorizontal,
-  CloudUpload,
   Loader2,
-  Trash2,
   RefreshCcw,
   History,
-  AlertTriangle,
-  Timer,
-  Repeat
+  Repeat,
+  AlertCircle,
+  CheckCircle2
 } from 'lucide-react';
 import { 
   UserRole, 
@@ -43,24 +33,10 @@ import {
   LeaveBalance, 
   UserProfile 
 } from './types';
-import { 
-  MOCK_USER, 
-  MOCK_MANAGER, 
-  INITIAL_BALANCES, 
-  INITIAL_REQUESTS 
-} from './mockData';
+import { SheetService } from './sheetService';
 
-// --- SLA Configuration ---
-const SLA_DAYS_REQUIRED: Record<string, number> = {
-  [LeaveType.ANNUAL]: 5,
-  [LeaveType.PERSONAL]: 5,
-  [LeaveType.OTHER]: 5,
-  [LeaveType.SICK]: 0,
-  [LeaveType.MATERNITY]: 0,
-  [LeaveType.PUBLIC_HOLIDAY]: 0,
-  [LeaveType.LEAVE_WITHOUT_PAY]: 0,
-  [LeaveType.WEEKLY_HOLIDAY_SWITCH]: 0,
-};
+// --- Constants ---
+const LIFF_ID = '2007509057-esMqbZzO';
 
 // --- Helper Functions ---
 const getLeaveTheme = (type: LeaveType) => {
@@ -68,15 +44,15 @@ const getLeaveTheme = (type: LeaveType) => {
     case LeaveType.SICK: 
       return { color: 'bg-rose-500', bg: 'bg-rose-50', text: 'text-rose-600', icon: Thermometer, label: 'ลาป่วย' };
     case LeaveType.ANNUAL: 
-      return { color: 'bg-indigo-500', bg: 'bg-indigo-50', text: 'text-indigo-600', icon: Palmtree, label: 'ลาพักร้อน' };
+      return { color: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-600', icon: Palmtree, label: 'ลาพักร้อน' };
     case LeaveType.PERSONAL: 
       return { color: 'bg-amber-500', bg: 'bg-amber-50', text: 'text-amber-600', icon: UserCheck, label: 'ลากิจ' };
     case LeaveType.PUBLIC_HOLIDAY: 
-      return { color: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-600', icon: Flag, label: 'วันหยุด' };
+      return { color: 'bg-indigo-500', bg: 'bg-indigo-50', text: 'text-indigo-600', icon: Flag, label: 'วันหยุด' };
     case LeaveType.MATERNITY: 
       return { color: 'bg-purple-500', bg: 'bg-purple-50', text: 'text-purple-600', icon: Baby, label: 'ลาคลอด' };
     case LeaveType.LEAVE_WITHOUT_PAY: 
-      return { color: 'bg-orange-600', bg: 'bg-orange-50', text: 'text-orange-700', icon: Wallet, label: 'ไม่รับค่าจ้าง' };
+      return { color: 'bg-slate-600', bg: 'bg-slate-50', text: 'text-slate-700', icon: Wallet, label: 'ไม่รับค่าจ้าง' };
     case LeaveType.WEEKLY_HOLIDAY_SWITCH:
       return { color: 'bg-cyan-500', bg: 'bg-cyan-50', text: 'text-cyan-600', icon: Repeat, label: 'สลับวันหยุด' };
     case LeaveType.OTHER: 
@@ -90,24 +66,12 @@ const calculateDays = (start: string, end: string): number => {
   if (!start || !end) return 0;
   const startDate = new Date(start);
   const endDate = new Date(end);
-  const diffTime = endDate.getTime() - startDate.getTime();
+  const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
   return diffDays > 0 ? diffDays : 0;
 };
 
-const calculateAdvanceDays = (startDateStr: string): number => {
-  if (!startDateStr) return 0;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const startDate = new Date(startDateStr);
-  startDate.setHours(0, 0, 0, 0);
-  
-  const diffTime = startDate.getTime() - today.getTime();
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-};
-
-// --- Sub-components ---
-
+// --- UI Components ---
 const StatusBadge = ({ status }: { status: LeaveStatus }) => {
   const styles = {
     [LeaveStatus.PENDING]: 'bg-amber-100 text-amber-700 border-amber-200',
@@ -116,891 +80,504 @@ const StatusBadge = ({ status }: { status: LeaveStatus }) => {
     [LeaveStatus.CANCELLED]: 'bg-slate-100 text-slate-500 border-slate-200',
   };
   return (
-    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${styles[status]}`}>
+    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-widest ${styles[status]}`}>
       {status}
     </span>
   );
 };
 
-interface DashboardCardProps {
-  type: LeaveType;
-  value: number;
-  total: number;
-  onClick: () => void;
-}
-
-const DashboardCard: React.FC<DashboardCardProps> = ({ type, value, total, onClick }) => {
+const DashboardCard: React.FC<{ type: LeaveType; value: number; total: number; onClick: () => void }> = ({ type, value, total, onClick }) => {
   const isSwitch = type === LeaveType.WEEKLY_HOLIDAY_SWITCH;
-  const remaining = total - value;
-  const progress = total > 0 ? (value / total) * 100 : 0;
   const theme = getLeaveTheme(type);
   const Icon = theme.icon;
+  const progress = (total + value) > 0 ? (value / (value + total)) * 100 : 0;
 
   return (
     <div 
       onClick={onClick}
-      className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm cursor-pointer active:scale-95 transition-all hover:border-slate-300 group relative"
+      className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm cursor-pointer active:scale-95 transition-all hover:border-slate-300 group"
     >
-      <div className="flex justify-between items-start mb-3">
-        <div className={`p-2 rounded-xl ${theme.bg} ${theme.text}`}>
-          <Icon size={18} />
+      <div className="flex justify-between items-start mb-4">
+        <div className={`p-2.5 rounded-xl ${theme.bg} ${theme.text}`}>
+          <Icon size={20} />
         </div>
-        <ChevronRight size={14} className="text-slate-300 group-hover:text-slate-500 transition-colors" />
+        <ChevronRight size={14} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
       </div>
 
-      <div className="mb-3">
-        <h3 className="text-slate-500 text-[10px] font-bold uppercase tracking-wider truncate mb-1">
+      <div>
+        <h3 className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1 truncate">
           {theme.label}
         </h3>
         <div className="flex items-baseline gap-1">
-          <span className="text-2xl font-bold text-slate-800">{isSwitch ? value : remaining}</span>
+          <span className="text-2xl font-bold text-slate-800">{isSwitch ? value : total}</span>
           <span className="text-[10px] font-medium text-slate-400">
-            {isSwitch ? 'รายการสะสม' : 'วันคงเหลือ'}
+            {isSwitch ? 'รายการ' : 'วันคงเหลือ'}
           </span>
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        {!isSwitch && (
-          <>
-            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-              <div 
-                className={`h-full ${theme.color} transition-all duration-700`} 
-                style={{ width: `${Math.min(100, progress)}%` }}
-              />
-            </div>
-            <div className="flex justify-between items-center text-[9px] font-bold text-slate-400 uppercase">
-              <span>ใช้ไป {value}</span>
-              <span>ทั้งหมด {total}</span>
-            </div>
-          </>
-        )}
-        {isSwitch && (
-           <div className="text-[9px] font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded">
-              สะสมเข้า "ลาอื่นๆ" อัตโนมัติ
-           </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const ImageModal = ({ src, onClose }: { src: string, onClose: () => void }) => {
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4" onClick={onClose}>
-      <button className="absolute top-6 right-6 text-white p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors">
-        <X size={24} />
-      </button>
-      <img src={src} alt="Preview" className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" onClick={(e) => e.stopPropagation()} />
-    </div>
-  );
-};
-
-// --- Login View ---
-
-const LoginView = ({ onLogin }: { onLogin: (staffId: string) => void }) => {
-  const [staffId, setStaffId] = useState('');
-  const dummyLineId = "Ufd0e0827bd454c6fb7024fe9e47b"; 
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (staffId.trim()) {
-      onLogin(staffId);
-    }
-  };
-
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50">
-      <div className="w-full max-w-sm bg-white rounded-[3rem] p-10 shadow-xl border border-slate-100 text-center relative">
-        <div className="flex justify-center mb-6">
-           <div className="bg-indigo-600 p-5 rounded-2xl shadow-lg shadow-indigo-100">
-              <Clock className="text-white" size={40} />
-           </div>
-        </div>
-        <h1 className="text-3xl font-bold text-slate-800">LMS Online</h1>
-        <p className="text-slate-400 mt-1 mb-10 text-sm">Leave Management System</p>
-        <form onSubmit={handleSubmit} className="space-y-6 text-left">
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-400 uppercase px-1">LINE User ID</label>
-            <div className="w-full bg-slate-50 border border-slate-100 p-4 rounded-xl text-slate-500 text-xs overflow-hidden text-ellipsis whitespace-nowrap">
-              {dummyLineId}...
-            </div>
+      {!isSwitch && (
+        <div className="mt-4 space-y-1.5">
+          <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+            <div className={`h-full ${theme.color} transition-all duration-700`} style={{ width: `${Math.min(100, progress)}%` }} />
           </div>
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-400 uppercase px-1">Staff ID (รหัสพนักงาน)</label>
-            <input 
-              type="text"
-              placeholder="กรอกรหัสพนักงาน"
-              className="w-full bg-white border border-slate-200 p-4 rounded-xl text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-300"
-              value={staffId}
-              onChange={(e) => setStaffId(e.target.value)}
-            />
+          <div className="text-[9px] font-bold text-slate-400 uppercase">
+            ใช้ไป {value} วัน
           </div>
-          <button 
-            type="submit"
-            className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-indigo-700 transition-all active:scale-[0.98]"
-          >
-            เข้าสู่ระบบ
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-};
-
-// --- Detail View for Specific Leave Type ---
-
-const LeaveTypeDetailView = ({ 
-  type, 
-  balance, 
-  requests, 
-  onBack 
-}: { 
-  type: LeaveType, 
-  balance: LeaveBalance, 
-  requests: LeaveRequest[], 
-  onBack: () => void 
-}) => {
-  const filteredRequests = requests.filter(r => r.type === type && r.status !== LeaveStatus.CANCELLED);
-  const theme = getLeaveTheme(type);
-  const isSwitch = type === LeaveType.WEEKLY_HOLIDAY_SWITCH;
-  
-  return (
-    <div className="space-y-6 pb-20 animate-in fade-in slide-in-from-right-4 duration-300">
-      <header className="flex items-center gap-4">
-        <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-          <ChevronLeft size={24} className="text-slate-800" />
-        </button>
-        <div>
-          <h1 className="text-xl font-bold text-slate-800">{theme.label}</h1>
-          <p className="text-xs text-slate-500">รายละเอียดและประวัติการทำรายการ</p>
-        </div>
-      </header>
-
-      <section className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden">
-        <div className="flex justify-between items-end mb-4">
-           <div>
-              <p className="text-xs font-bold text-slate-400 uppercase mb-1">
-                {isSwitch ? 'สะสมสำเร็จ' : 'วันคงเหลือ'}
-              </p>
-              <h2 className="text-4xl font-bold text-slate-800">
-                {isSwitch ? balance.used : (balance.total - balance.used)} <span className="text-sm font-medium text-slate-400">{isSwitch ? 'ครั้ง' : 'วัน'}</span>
-              </h2>
-           </div>
-           {!isSwitch && (
-             <div className="text-right">
-                <p className="text-[10px] font-bold text-slate-400 uppercase">สิทธิทั้งหมด</p>
-                <p className="text-lg font-bold text-slate-800">{balance.total} วัน</p>
-             </div>
-           )}
-        </div>
-        {!isSwitch && (
-          <div className="w-full bg-slate-100 rounded-full h-3 mb-2">
-            <div 
-              className={`h-3 rounded-full ${theme.color}`} 
-              style={{ width: `${balance.total > 0 ? ((balance.total - balance.used) / balance.total) * 100 : 0}%` }}
-            />
-          </div>
-        )}
-        <div className="flex justify-between text-[10px] font-bold text-slate-400">
-           <span>{isSwitch ? 'สะสมเพื่อใช้ลาประเภทอื่น' : `ใช้ไปแล้ว ${balance.used} วัน`}</span>
-           <span>รอบปี 2024</span>
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <h3 className="text-sm font-bold text-slate-800 uppercase px-1">ประวัติการทำรายการ</h3>
-        {filteredRequests.length === 0 ? (
-          <div className="bg-white/50 border border-dashed border-slate-200 rounded-2xl p-10 text-center text-slate-400 text-sm">
-             ไม่มีประวัติสำหรับประเภทนี้
-          </div>
-        ) : (
-          filteredRequests.map(req => (
-            <div key={req.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex justify-between items-center group">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <p className="text-xs font-bold text-slate-800">{req.startDate} — {req.endDate}</p>
-                  <StatusBadge status={req.status} />
-                </div>
-                <p className="text-[10px] text-slate-500 italic">"{req.reason}"</p>
-              </div>
-              <ChevronRight size={14} className="text-slate-300" />
-            </div>
-          ))
-        )}
-      </section>
-    </div>
-  );
-};
-
-// --- Main Views ---
-
-const DashboardView = ({ 
-  user, 
-  balances, 
-  requests, 
-  onNavigate,
-  onSelectType
-}: { 
-  user: UserProfile, 
-  balances: LeaveBalance[], 
-  requests: LeaveRequest[],
-  onNavigate: (view: string) => void,
-  onSelectType: (type: LeaveType) => void
-}) => {
-  const recentRequests = requests.filter(r => r.status !== LeaveStatus.CANCELLED).slice(0, 3);
-  const dashboardBalances = balances;
-
-  return (
-    <div className="space-y-6 pb-20 animate-in fade-in duration-500">
-      <header className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">สวัสดี, {user.name.split(' ')[0]}</h1>
-          <div className="flex items-center gap-1.5 text-slate-500 text-xs">
-            <span className="font-medium">{user.position}</span>
-            <span className="text-slate-300">|</span>
-            <span className="font-bold text-indigo-600">{user.siteId}</span>
-          </div>
-        </div>
-        <button 
-          className="bg-indigo-600 p-2.5 rounded-xl text-white shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95" 
-          onClick={() => onNavigate('new')}
-        >
-          <PlusCircle size={24} />
-        </button>
-      </header>
-
-      <section>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider">สิทธิการลาคงเหลือ</h2>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          {dashboardBalances.map((b) => (
-            <DashboardCard 
-              key={b.type} 
-              type={b.type} 
-              value={b.used} 
-              total={b.total} 
-              onClick={() => onSelectType(b.type)}
-            />
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider">รายการล่าสุด</h2>
-          <button 
-            className="text-indigo-600 text-xs font-bold hover:underline"
-            onClick={() => onNavigate('history')}
-          >
-            ดูทั้งหมด
-          </button>
-        </div>
-        <div className="space-y-3">
-          {recentRequests.map((req) => (
-            <div key={req.id} className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${req.status === LeaveStatus.APPROVED ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-500'}`}>
-                  <Calendar size={18} />
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-800 text-xs">{req.type.split(' (')[0]}</h4>
-                  <p className="text-[10px] text-slate-400">{req.startDate} — {req.endDate}</p>
-                </div>
-              </div>
-              <StatusBadge status={req.status} />
-            </div>
-          ))}
-        </div>
-      </section>
-    </div>
-  );
-};
-
-const NewRequestView = ({ 
-  onSubmit,
-  balances,
-  initialData 
-}: { 
-  onSubmit: (data: Partial<LeaveRequest>) => void,
-  balances: LeaveBalance[],
-  initialData?: Partial<LeaveRequest>
-}) => {
-  const [formData, setFormData] = useState({
-    type: initialData?.type || LeaveType.ANNUAL,
-    startDate: initialData?.startDate || '',
-    endDate: initialData?.endDate || '',
-    reason: initialData?.reason || '',
-  });
-  const [attachment, setAttachment] = useState<string | null>(initialData?.attachmentUrl || null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Computed Values
-  const isSwitch = formData.type === LeaveType.WEEKLY_HOLIDAY_SWITCH;
-  const requestedDays = useMemo(() => calculateDays(formData.startDate, formData.endDate), [formData.startDate, formData.endDate]);
-  const advanceDays = useMemo(() => calculateAdvanceDays(formData.startDate), [formData.startDate]);
-  const requiredSLA = SLA_DAYS_REQUIRED[formData.type] || 0;
-  
-  const currentBalance = balances.find(b => b.type === formData.type);
-  const remainingDays = currentBalance ? (currentBalance.total - currentBalance.used) : 0;
-  
-  // Validation Logic
-  const isBalanceExceeded = !isSwitch && requestedDays > remainingDays && formData.type !== LeaveType.LEAVE_WITHOUT_PAY;
-  const isSLAProblem = formData.startDate && advanceDays < requiredSLA;
-
-  useEffect(() => {
-    if (initialData) {
-      setFormData({
-        type: initialData.type || LeaveType.ANNUAL,
-        startDate: initialData.startDate || '',
-        endDate: initialData.endDate || '',
-        reason: initialData.reason || '',
-      });
-      setAttachment(initialData.attachmentUrl || null);
-    }
-  }, [initialData]);
-
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setIsUploading(true);
-      setError('');
-      try {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        const blobUrl = URL.createObjectURL(file);
-        setAttachment(blobUrl);
-      } catch (err) {
-        setError('ไม่สามารถอัปโหลดรูปภาพได้');
-      } finally {
-        setIsUploading(false);
-      }
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.startDate || !formData.endDate || !formData.reason) {
-      setError('กรุณากรอกข้อมูลให้ครบถ้วน');
-      return;
-    }
-    if (isBalanceExceeded) {
-      setError('จำนวนวันลาเกินสิทธิคงเหลือ');
-      return;
-    }
-    if (isSLAProblem) {
-      setError(`ประเภทลานี้ต้องแจ้งล่วงหน้าอย่างน้อย ${requiredSLA} วัน`);
-      return;
-    }
-    onSubmit({ ...formData, attachmentUrl: attachment || undefined });
-  };
-
-  return (
-    <div className="space-y-6 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-300">
-      <header className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">{isSwitch ? 'ขอสลับวันหยุด' : (initialData ? 'ยื่นคำขอใหม่ (จากรายการเดิม)' : 'ยื่นคำขอใหม่')}</h1>
-          <p className="text-slate-500 text-sm">{isSwitch ? 'เพิ่มสิทธิวันหยุดทดแทน' : 'สร้างคำขอลาพักผ่อนหรือทำธุระ'}</p>
-        </div>
-        {(initialData || isSwitch) && (
-          <div className={`${isSwitch ? 'bg-cyan-50 text-cyan-600' : 'bg-amber-50 text-amber-600'} p-2 rounded-xl`}>
-             <Repeat size={20} className={isSwitch ? '' : 'animate-spin-slow'} />
-          </div>
-        )}
-      </header>
-
-      {/* SLA Alert Banner */}
-      {isSLAProblem && (
-        <div className="bg-orange-50 border border-orange-200 p-4 rounded-2xl flex items-start gap-3 animate-in slide-in-from-top-2">
-           <Timer className="text-orange-600 mt-1 shrink-0" size={18} />
-           <div>
-              <p className="text-xs font-bold text-orange-800 uppercase">ผิดเงื่อนไข SLA</p>
-              <p className="text-[11px] text-orange-700 leading-relaxed">
-                ประเภทการลา "{getLeaveTheme(formData.type).label}" ต้องแจ้งล่วงหน้าอย่างน้อย <b>{requiredSLA} วัน</b> 
-                (คุณแจ้งล่วงหน้า {advanceDays < 0 ? 0 : advanceDays} วัน)
-              </p>
-           </div>
         </div>
       )}
-
-      {/* Balance Validation Banner */}
-      {isBalanceExceeded && !isSLAProblem && (
-        <div className="bg-rose-50 border border-rose-200 p-4 rounded-2xl flex items-start gap-3 animate-pulse">
-           <AlertTriangle className="text-rose-600 mt-1 shrink-0" size={18} />
-           <div>
-              <p className="text-xs font-bold text-rose-800 uppercase">สิทธิการลาไม่เพียงพอ</p>
-              <p className="text-[11px] text-rose-700 leading-relaxed">
-                คุณขอลา {requestedDays} วัน แต่มีสิทธิคงเหลือเพียง {remainingDays} วัน
-              </p>
-           </div>
-        </div>
-      )}
-
-      {/* Switch Benefit Info */}
-      {isSwitch && (
-        <div className="bg-cyan-50 border border-cyan-100 p-4 rounded-2xl flex items-start gap-3">
-           <Info className="text-cyan-600 mt-1 shrink-0" size={18} />
-           <div>
-              <p className="text-xs font-bold text-cyan-800 uppercase">ข้อมูลการสลับวันหยุด</p>
-              <p className="text-[11px] text-cyan-700 leading-relaxed">
-                หากได้รับอนุมัติ จำนวนวันที่สลับจะถูกเพิ่มเข้าไปในสิทธิ <b>"ลาอื่นๆ"</b> ของคุณโดยอัตโนมัติ
-              </p>
-           </div>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-1">
-          <label className="text-xs font-bold text-slate-500 uppercase px-1 flex justify-between">
-            ประเภทการลา/สลับวัน
-            {requiredSLA > 0 && (
-              <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded flex items-center gap-1 normal-case font-medium">
-                <Timer size={10} /> แจ้งล่วงหน้า {requiredSLA} วัน
-              </span>
-            )}
-          </label>
-          <select 
-            className="w-full bg-white border border-slate-200 p-4 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-            value={formData.type}
-            onChange={(e) => setFormData({...formData, type: e.target.value as LeaveType})}
-          >
-            {Object.values(LeaveType).map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-500 uppercase px-1">วันที่เริ่ม</label>
-            <input 
-              type="date"
-              className={`w-full bg-white border ${isSLAProblem ? 'border-orange-300 ring-1 ring-orange-100' : 'border-slate-200'} p-4 rounded-xl font-medium outline-none transition-all`}
-              value={formData.startDate}
-              onChange={(e) => setFormData({...formData, startDate: e.target.value})}
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-500 uppercase px-1">วันที่สิ้นสุด</label>
-            <input 
-              type="date"
-              className="w-full bg-white border border-slate-200 p-4 rounded-xl font-medium outline-none"
-              value={formData.endDate}
-              onChange={(e) => setFormData({...formData, endDate: e.target.value})}
-            />
-          </div>
-        </div>
-
-        {/* Counter Info */}
-        {requestedDays > 0 && (
-          <div className="px-1 flex justify-between items-center">
-             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
-                <Calendar size={14} className={isSwitch ? "text-cyan-500" : "text-indigo-500"} />
-                {isSwitch ? 'สลับวันหยุดรวม' : 'ครั้งนี้ลา'} <span className={isBalanceExceeded ? "text-rose-600 underline" : (isSwitch ? "text-cyan-600" : "text-indigo-600")}>{requestedDays}</span> วัน
-             </div>
-             {!isSwitch && (
-               <div className="text-[10px] font-bold text-slate-400 uppercase">
-                  สิทธิคงเหลือ <span className="text-slate-700">{remainingDays}</span> วัน
-               </div>
-             )}
-          </div>
-        )}
-
-        <div className="space-y-1">
-          <label className="text-xs font-bold text-slate-500 uppercase px-1">เหตุผล{isSwitch ? 'การสลับวัน' : 'การลา'}</label>
-          <textarea 
-            rows={3}
-            className="w-full bg-white border border-slate-200 p-4 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder={isSwitch ? "เช่น สลับวันหยุดเพื่อมาทำงานในวันหยุดนักขัตฤกษ์..." : "ระบุเหตุผลการลา..."}
-            value={formData.reason}
-            onChange={(e) => setFormData({...formData, reason: e.target.value})}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-xs font-bold text-slate-500 uppercase px-1">หลักฐานเพิ่มเติม (ถ้ามี)</label>
-          <div className="flex flex-col gap-3">
-            {!attachment && !isUploading ? (
-              <button 
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full flex flex-col items-center justify-center gap-2 py-8 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all group"
-              >
-                <Camera size={24} />
-                <span className="font-bold text-sm">อัปโหลดรูปภาพ</span>
-              </button>
-            ) : isUploading ? (
-              <div className="w-full py-12 border-2 border-dashed border-indigo-100 rounded-2xl bg-indigo-50/30 flex flex-col items-center justify-center gap-3">
-                <Loader2 className="text-indigo-600 animate-spin" size={32} />
-              </div>
-            ) : (
-              <div className="relative w-full rounded-2xl overflow-hidden border border-slate-200 shadow-sm aspect-video bg-slate-100">
-                <img src={attachment!} alt="Preview" className="w-full h-full object-contain" />
-                <button 
-                  type="button"
-                  onClick={() => setAttachment(null)}
-                  className="absolute top-3 right-3 bg-rose-500 text-white p-2 rounded-full shadow-lg"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-            )}
-            <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageChange} />
-          </div>
-        </div>
-
-        <button 
-          type="submit"
-          disabled={isUploading || isBalanceExceeded || isSLAProblem}
-          className={`w-full text-white font-bold py-4 rounded-xl shadow-lg transition-all flex justify-center items-center gap-2 ${isUploading || isBalanceExceeded || isSLAProblem ? 'bg-slate-300 cursor-not-allowed opacity-70' : 'bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98]'}`}
-        >
-          {isUploading ? <Loader2 className="animate-spin" size={20} /> : <PlusCircle size={20} />}
-          {isUploading ? 'กรุณารอสักครู่...' : isSLAProblem ? 'ผิดเกณฑ์ SLA' : isBalanceExceeded ? 'สิทธิไม่เพียงพอ' : 'ยืนยันส่งคำขอ'}
-        </button>
-      </form>
-    </div>
-  );
-};
-
-const HistoryView = ({ 
-  requests, 
-  onCancel, 
-  onResubmit 
-}: { 
-  requests: LeaveRequest[], 
-  onCancel: (id: string) => void,
-  onResubmit: (req: LeaveRequest) => void
-}) => {
-  const sortedRequests = [...requests].sort((a, b) => {
-    if (a.status === LeaveStatus.PENDING && b.status !== LeaveStatus.PENDING) return -1;
-    if (a.status !== LeaveStatus.PENDING && b.status === LeaveStatus.PENDING) return 1;
-    return new Date(b.appliedDate).getTime() - new Date(a.appliedDate).getTime();
-  });
-
-  return (
-    <div className="space-y-6 pb-20 animate-in fade-in duration-300">
-      <header>
-        <h1 className="text-2xl font-bold text-slate-800">ประวัติรายการ</h1>
-        <p className="text-slate-500 text-sm">ติดตามและจัดการคำขอย้อนหลัง</p>
-      </header>
-      <div className="space-y-4">
-        {sortedRequests.length === 0 ? (
-          <div className="text-center py-20 text-slate-300">
-            <ClipboardList size={64} className="mx-auto mb-4 opacity-10" />
-            <p className="font-bold text-xs uppercase tracking-widest">ยังไม่มีประวัติ</p>
-          </div>
-        ) : (
-          sortedRequests.map((req) => (
-            <div key={req.id} className={`bg-white p-5 rounded-2xl border ${req.status === LeaveStatus.CANCELLED ? 'border-slate-100 opacity-60' : 'border-slate-100'} shadow-sm space-y-4 transition-all`}>
-              <div className="flex justify-between items-start">
-                <div className="flex-1 mr-4">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-slate-800 text-sm">{req.type.split(' (')[0]}</h3>
-                    {req.attachmentUrl && <ImageIcon size={14} className="text-indigo-500" />}
-                  </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${req.type === LeaveType.WEEKLY_HOLIDAY_SWITCH ? 'bg-cyan-50 text-cyan-600' : 'bg-indigo-50 text-indigo-500'}`}>{req.siteId}</span>
-                    <p className="text-[10px] text-slate-400 font-medium">ยื่นเมื่อ {req.appliedDate}</p>
-                  </div>
-                </div>
-                <StatusBadge status={req.status} />
-              </div>
-              
-              <div className="bg-slate-50 p-3 rounded-xl flex items-center justify-between text-[11px] font-bold text-slate-700">
-                <div className="flex items-center gap-2">
-                  <Calendar size={14} className="text-indigo-500" />
-                  <span>{req.startDate} — {req.endDate} ({req.totalDays} วัน)</span>
-                </div>
-              </div>
-
-              {req.status === LeaveStatus.REJECTED && req.approverReason && (
-                <div className="bg-rose-50 border border-rose-100 p-3 rounded-xl">
-                  <p className="text-[10px] font-bold text-rose-600 uppercase mb-1">เหตุผลที่ปฏิเสธ:</p>
-                  <p className="text-[11px] text-rose-700 italic">"{req.approverReason}"</p>
-                  <p className="text-[9px] text-rose-400 mt-1 font-bold uppercase">โดย: {req.approver}</p>
-                </div>
-              )}
-
-              {req.status === LeaveStatus.APPROVED && (
-                <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-xl">
-                  <p className="text-[9px] text-emerald-600 font-bold uppercase">อนุมัติโดย: {req.approver}</p>
-                  <p className="text-[9px] text-emerald-400">เมื่อวันที่: {req.approvalDate}</p>
-                </div>
-              )}
-
-              <div className="pt-2 flex gap-2">
-                {req.status === LeaveStatus.PENDING && (
-                  <button 
-                    onClick={() => {
-                      if(confirm('คุณแน่ใจหรือไม่ว่าต้องการยกเลิกคำขอนี้?')) onCancel(req.id);
-                    }}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white border border-rose-200 text-rose-600 rounded-xl text-[10px] font-bold uppercase hover:bg-rose-50 transition-colors"
-                  >
-                    <Trash2 size={14} />
-                    ยกเลิกคำขอ
-                  </button>
-                )}
-                {req.status === LeaveStatus.REJECTED && (
-                  <button 
-                    onClick={() => onResubmit(req)}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-xl text-[10px] font-bold uppercase hover:bg-indigo-100 transition-colors"
-                  >
-                    <RefreshCcw size={14} />
-                    ยื่นใหม่อีกครั้ง
-                  </button>
-                )}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
-};
-
-const ManagerView = ({ 
-  requests, 
-  onAction,
-  onPreviewImage
-}: { 
-  requests: LeaveRequest[], 
-  onAction: (id: string, status: LeaveStatus, reason?: string) => void,
-  onPreviewImage: (src: string) => void
-}) => {
-  const pending = requests.filter(r => r.status === LeaveStatus.PENDING);
-  return (
-    <div className="space-y-6 pb-20 animate-in fade-in duration-300">
-      <header>
-        <h1 className="text-2xl font-bold text-slate-800">อนุมัติคำขอ (Supervisor)</h1>
-        <p className="text-slate-500 text-sm">รายการรอดำเนินการ</p>
-      </header>
-      <div className="space-y-4">
-        {pending.length === 0 ? (
-          <div className="text-center py-20 text-slate-300">
-            <CheckCircle2 size={64} className="mx-auto mb-4 opacity-10 text-emerald-500" />
-            <p className="font-bold text-xs uppercase tracking-widest">ไม่มีรายการรออนุมัติ</p>
-          </div>
-        ) : (
-          pending.map((req) => (
-            <div key={req.id} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-700 font-bold">
-                  {req.staffName.charAt(0)}
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-sm">{req.staffName}</h3>
-                  <p className="text-[10px] text-slate-400 font-bold">ID: {req.staffId}</p>
-                </div>
-              </div>
-              
-              <div className="bg-slate-50 p-4 rounded-2xl space-y-2 text-xs">
-                 <div className="flex justify-between font-bold">
-                    <span className="text-slate-400 uppercase text-[9px]">ประเภท:</span>
-                    <span className={req.type === LeaveType.WEEKLY_HOLIDAY_SWITCH ? "text-cyan-600" : "text-indigo-600"}>{req.type.split(' (')[0]}</span>
-                 </div>
-                 <div className="flex justify-between font-bold">
-                    <span className="text-slate-400 uppercase text-[9px]">ระยะเวลา:</span>
-                    <span>{req.startDate} ถึง {req.endDate} ({req.totalDays} วัน)</span>
-                 </div>
-                 <p className="text-slate-600 mt-2 italic">"{req.reason}"</p>
-              </div>
-
-              {req.attachmentUrl && (
-                <div 
-                  onClick={() => onPreviewImage(req.attachmentUrl!)}
-                  className="w-full h-32 bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 relative cursor-pointer group"
-                >
-                  <img src={req.attachmentUrl} alt="Attachment" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Eye className="text-white" />
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => {
-                    const r = prompt("ระบุเหตุผลที่ปฏิเสธ:");
-                    if (r) onAction(req.id, LeaveStatus.REJECTED, r);
-                  }}
-                  className="flex-1 bg-white border border-slate-200 text-slate-400 font-bold py-3 rounded-xl text-[10px] uppercase hover:bg-slate-50"
-                >
-                  ปฏิเสธ
-                </button>
-                <button 
-                  onClick={() => onAction(req.id, LeaveStatus.APPROVED)}
-                  className="flex-[2] bg-indigo-600 text-white font-bold py-3 rounded-xl text-[10px] uppercase shadow-lg shadow-indigo-100 hover:bg-indigo-700"
-                >
-                  อนุมัติคำขอ
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
     </div>
   );
 };
 
 // --- Main Application ---
-
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [view, setView] = useState('dashboard');
   const [selectedLeaveType, setSelectedLeaveType] = useState<LeaveType | null>(null);
-  const [user, setUser] = useState<UserProfile>(MOCK_USER);
-  const [balances, setBalances] = useState<LeaveBalance[]>(INITIAL_BALANCES);
-  const [requests, setRequests] = useState<LeaveRequest[]>(INITIAL_REQUESTS);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [prefillData, setPrefillData] = useState<Partial<LeaveRequest> | undefined>(undefined);
+  
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [balances, setBalances] = useState<LeaveBalance[]>([]);
+  const [requests, setRequests] = useState<LeaveRequest[]>([]);
+  const [staffIdInput, setStaffIdInput] = useState('');
+  const [lineUserId, setLineUserId] = useState('Wait for LIFF...');
+  const [linePicture, setLinePicture] = useState('');
 
-  const toggleRole = () => {
-    setUser(user.roleType === UserRole.FIXED ? MOCK_MANAGER : MOCK_USER);
-    setView('dashboard');
-    setSelectedLeaveType(null);
+  // LIFF Initialization
+  useEffect(() => {
+    const initLiff = async () => {
+      try {
+        // @ts-ignore
+        await liff.init({ liffId: LIFF_ID });
+        // @ts-ignore
+        if (liff.isLoggedIn()) {
+          // @ts-ignore
+          const profile = await liff.getProfile();
+          setLineUserId(profile.userId);
+          setLinePicture(profile.pictureUrl || '');
+        } else {
+          // @ts-ignore
+          liff.login();
+        }
+      } catch (err) {
+        console.error('LIFF Init failed', err);
+        setLineUserId('LINE_MOCK_USER_ID');
+      }
+    };
+    initLiff();
+  }, []);
+
+  const handleLogin = async () => {
+    if (!staffIdInput) return;
+    setLoading(true);
+    try {
+      const profile = await SheetService.getProfile(staffIdInput);
+      if (profile) {
+        setUser(profile);
+        const rawBalances = await SheetService.getBalances(staffIdInput);
+        if (rawBalances) setBalances(rawBalances.balances);
+        const reqs = await SheetService.getRequests(staffIdInput, profile.roleType === UserRole.SUPERVISOR);
+        setRequests(reqs);
+        setIsLoggedIn(true);
+      } else {
+        alert('ไม่พบรหัสพนักงานในระบบ (Employee_DB)');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCreateRequest = (data: Partial<LeaveRequest>) => {
-    const days = calculateDays(data.startDate || '', data.endDate || '');
-    const newRequest: LeaveRequest = {
-      id: `REQ-${Math.floor(Math.random() * 1000)}`,
-      appliedDate: new Date().toISOString().split('T')[0], // Column 1
+  const syncData = async (staffId: string) => {
+    setLoading(true);
+    try {
+      const rawBalances = await SheetService.getBalances(staffId);
+      if (rawBalances) setBalances(rawBalances.balances);
+      const reqs = await SheetService.getRequests(staffId, user?.roleType === UserRole.SUPERVISOR);
+      setRequests(reqs);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreate = async (data: { type: LeaveType, startDate: string, endDate: string, reason: string }) => {
+    if (!user) return;
+    setLoading(true);
+    const totalDays = calculateDays(data.startDate, data.endDate);
+    const request: Partial<LeaveRequest> = {
+      appliedDate: new Date().toISOString().split('T')[0],
       staffId: user.staffId,
       staffName: user.name,
       siteId: user.siteId,
-      type: data.type || LeaveType.ANNUAL,
-      startDate: data.startDate || '',
-      endDate: data.endDate || '',
-      totalDays: days, // Column 9
-      reason: data.reason || '',
-      status: LeaveStatus.PENDING,
-      attachmentUrl: data.attachmentUrl,
+      type: data.type,
+      startDate: data.startDate,
+      endDate: data.endDate,
+      totalDays: totalDays,
+      reason: data.reason,
+      status: LeaveStatus.PENDING
     };
-    setRequests([newRequest, ...requests]);
-    setPrefillData(undefined);
-    setView('history');
-  };
 
-  const handleCancelRequest = (id: string) => {
-    setRequests(requests.map(r => r.id === id ? { ...r, status: LeaveStatus.CANCELLED } : r));
-  };
-
-  const handleResubmitRequest = (req: LeaveRequest) => {
-    setPrefillData({
-      type: req.type,
-      startDate: req.startDate,
-      endDate: req.endDate,
-      reason: req.reason,
-      attachmentUrl: req.attachmentUrl
-    });
-    setView('new');
-  };
-
-  const handleAction = (id: string, status: LeaveStatus, reason?: string) => {
-    const target = requests.find(r => r.id === id);
-    if (!target) return;
-
-    if (status === LeaveStatus.APPROVED) {
-      if (target.type === LeaveType.WEEKLY_HOLIDAY_SWITCH) {
-        // เมื่ออนุมัติสลับวันหยุด: 
-        // 1. เพิ่มยอดสะสมใน 'การขอสลับวันหยุด' (Column 14) 
-        // 2. เพิ่มจำนวนวันคงเหลือใน 'ลาอื่นๆ' (Column 16) ผ่านการเพิ่ม total
-        setBalances(prev => prev.map(b => {
-          if (b.type === LeaveType.WEEKLY_HOLIDAY_SWITCH) {
-            return { ...b, used: b.used + 1 }; // เพิ่มจำนวนครั้งที่สลับสำเร็จ
-          }
-          if (b.type === LeaveType.OTHER) {
-            return { ...b, total: b.total + target.totalDays }; // เพิ่มสิทธิในลาอื่นๆ
-          }
-          return b;
-        }));
+    try {
+      const res = await SheetService.submitRequest(request);
+      if (res.success) {
+        alert('ส่งคำขอลาสำเร็จ');
+        await syncData(user.staffId);
+        setView('dashboard');
       } else {
-        setBalances(prev => prev.map(b => b.type === target.type ? { ...b, used: b.used + target.totalDays } : b));
+        alert('ไม่สามารถส่งคำขอได้ กรุณาลองใหม่');
       }
+    } catch (e) {
+      console.error(e);
+      alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+    } finally {
+      setLoading(false);
     }
-
-    setRequests(requests.map(r => r.id === id ? { 
-      ...r, 
-      status, 
-      approver: user.name, // Column 13 (Manager's name)
-      approverReason: reason, 
-      approvalDate: new Date().toISOString().split('T')[0] 
-    } : r));
   };
 
-  if (!isLoggedIn) return <LoginView onLogin={() => setIsLoggedIn(true)} />;
+  const handleAction = async (requestId: string, status: LeaveStatus) => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const approverName = user.roleType === UserRole.SUPERVISOR ? user.name : undefined;
+      const success = await SheetService.updateRequestStatus(requestId, status, approverName);
+      if (success) {
+        await syncData(user.staffId);
+      } else {
+        alert('การดำเนินการไม่สำเร็จ');
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isLoggedIn) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8fafc] px-4">
+      {/* GeoClock Login Card */}
+      <div className="w-full max-w-[400px] bg-white rounded-[40px] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.08)] px-10 py-12 relative flex flex-col items-center">
+        
+        {/* Profile Avatar Top Right */}
+        <div className="absolute top-10 right-10 w-[54px] h-[54px] rounded-full border-[3.5px] border-[#d1fae5] p-[2px] overflow-hidden">
+          {linePicture ? (
+            <img src={linePicture} alt="LINE Avatar" className="w-full h-full object-cover rounded-full" />
+          ) : (
+            <div className="w-full h-full bg-emerald-50 rounded-full flex items-center justify-center">
+              <User className="text-emerald-300" size={24} />
+            </div>
+          )}
+        </div>
+
+        {/* Brand Icon */}
+        <div className="mt-8 mb-8">
+          <div className="w-[86px] h-[86px] bg-[#2563eb] rounded-[2.3rem] flex items-center justify-center shadow-2xl shadow-blue-100">
+            <Clock size={42} className="text-white" strokeWidth={2.5} />
+          </div>
+        </div>
+
+        {/* Title Section */}
+        <h1 className="text-[42px] font-bold text-[#1e293b] tracking-tight leading-none">GeoClock</h1>
+        <p className="text-[#94a3b8] text-[15.5px] font-medium mt-1.5 mb-14">Secure Attendance System</p>
+
+        {/* Form Fields */}
+        <div className="w-full space-y-7">
+          
+          {/* USER ID (LINE ID) */}
+          <div className="space-y-2">
+            <label className="text-[10.5px] font-bold text-[#94a3b8] uppercase tracking-[0.2em] ml-1">USER ID</label>
+            <div className="w-full bg-[#f1f5f9] border-none px-6 py-[19px] rounded-2xl text-[13px] text-[#64748b] font-medium truncate">
+              {lineUserId}
+            </div>
+          </div>
+
+          {/* STAFF ID */}
+          <div className="space-y-2">
+            <label className="text-[10.5px] font-bold text-[#94a3b8] uppercase tracking-[0.2em] ml-1">STAFF ID</label>
+            <input 
+              type="text"
+              className="w-full bg-[#f1f5f9] border-none px-6 py-[19px] rounded-2xl text-[#1e293b] outline-none font-bold placeholder:text-[#cbd5e1] placeholder:font-medium text-[16px] transition-all focus:bg-[#ecf2ff]"
+              placeholder="กรอกรหัสพนักงาน"
+              value={staffIdInput}
+              onChange={(e) => setStaffIdInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+            />
+          </div>
+
+          {/* Log In Button */}
+          <button 
+            onClick={handleLogin}
+            disabled={loading || !staffIdInput}
+            className="w-full bg-[#2563eb] text-white font-bold py-[21px] rounded-[1.25rem] shadow-[0_16px_36px_-6px_rgba(37,99,235,0.4)] hover:bg-[#1d4ed8] active:scale-[0.97] transition-all mt-6 flex items-center justify-center text-[18px] tracking-wide"
+          >
+            {loading ? <Loader2 className="animate-spin" size={26} /> : 'Log In'}
+          </button>
+        </div>
+
+        {/* Footer Brand */}
+        <div className="mt-16 text-[10px] font-bold text-[#cbd5e1] uppercase tracking-[0.28em] text-center">
+          MANAGEMENT BY SMC PROPERTY SOFT
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="max-w-md mx-auto min-h-screen bg-slate-50 shadow-2xl relative">
-      <div className="px-6 py-4 flex justify-between items-center bg-white border-b border-slate-100 sticky top-0 z-[60]">
-        <div className="flex items-center gap-2">
-           <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
-             <Clock size={18} />
-           </div>
-           <span className="font-bold text-slate-800 tracking-tight">LMS Online</span>
+    <div className="max-w-md mx-auto min-h-screen bg-slate-50 shadow-2xl relative flex flex-col">
+      {loading && (
+        <div className="fixed inset-0 z-[100] bg-white/60 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
+          <Loader2 className="animate-spin text-blue-600" size={32} />
+          <p className="text-blue-600 font-bold text-xs uppercase tracking-widest animate-pulse">กำลังซิงค์ข้อมูล...</p>
         </div>
-        <button 
-          onClick={toggleRole}
-          className="text-[9px] font-bold uppercase tracking-widest text-slate-400 bg-slate-50 border border-slate-200 px-2 py-1 rounded-lg"
-        >
-          {user.roleType}
+      )}
+
+      {/* Header */}
+      <div className="px-6 py-4 flex justify-between items-center bg-white border-b border-slate-100 sticky top-0 z-50">
+        <div className="flex items-center gap-3">
+           <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-white">
+             <Clock size={20} />
+           </div>
+           <div>
+              <span className="block font-bold text-slate-800 text-sm">LMS ONLINE</span>
+              <span className="text-[10px] text-blue-500 font-bold">{user?.siteId}</span>
+           </div>
+        </div>
+        <button onClick={() => syncData(user!.staffId)} className="p-2 text-slate-300 hover:text-blue-600 transition-colors">
+          <RefreshCcw size={18} />
         </button>
       </div>
 
-      <div className="px-6 pt-6 pb-24">
+      <div className="flex-1 overflow-y-auto px-6 py-6 pb-24">
         {selectedLeaveType ? (
-          <LeaveTypeDetailView 
-            type={selectedLeaveType} 
-            balance={balances.find(b => b.type === selectedLeaveType)!} 
-            requests={requests} 
-            onBack={() => setSelectedLeaveType(null)} 
-          />
+          <div className="space-y-6 animate-in slide-in-from-right-4">
+            <header className="flex items-center gap-3">
+              <button onClick={() => setSelectedLeaveType(null)} className="p-2 hover:bg-white rounded-full"><ChevronLeft size={24} /></button>
+              <h1 className="text-xl font-bold">{getLeaveTheme(selectedLeaveType).label}</h1>
+            </header>
+            <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm text-center">
+              <p className="text-xs font-bold text-slate-400 uppercase mb-2">วันคงเหลือปัจจุบัน</p>
+              <h2 className="text-6xl font-black text-slate-800 tracking-tighter">
+                {balances.find(b => b.type === selectedLeaveType)?.remain || 0}
+              </h2>
+              <p className="text-xs font-bold text-slate-400 mt-2">วัน</p>
+            </div>
+            <div className="space-y-3">
+               <h3 className="text-xs font-bold text-slate-400 uppercase px-1">ประวัติรายการ</h3>
+               {requests.filter(r => r.type === selectedLeaveType).map(req => (
+                 <div key={req.id} className="bg-white p-4 rounded-2xl border border-slate-50 flex justify-between items-center shadow-sm">
+                   <div>
+                     <p className="text-sm font-bold text-slate-800">{req.startDate}</p>
+                     <p className="text-[10px] text-slate-400">ลา {req.totalDays} วัน</p>
+                   </div>
+                   <StatusBadge status={req.status} />
+                 </div>
+               ))}
+            </div>
+          </div>
         ) : (
           <>
-            {view === 'dashboard' && <DashboardView user={user} balances={balances} requests={requests} onNavigate={setView} onSelectType={setSelectedLeaveType} />}
-            {view === 'new' && <NewRequestView onSubmit={handleCreateRequest} balances={balances} initialData={prefillData} />}
-            {view === 'history' && <HistoryView requests={requests} onCancel={handleCancelRequest} onResubmit={handleResubmitRequest} />}
-            {view === 'manager' && <ManagerView requests={requests} onAction={handleAction} onPreviewImage={setPreviewImage} />}
-            {view === 'profile' && (
-              <div className="space-y-6 animate-in fade-in duration-300 text-center">
-                <header className="text-left"><h1 className="text-2xl font-bold text-slate-800">โปรไฟล์</h1></header>
-                <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
-                  <div className="w-24 h-24 bg-indigo-50 rounded-2xl mx-auto flex items-center justify-center text-indigo-600 mb-4 border border-indigo-100 overflow-hidden">
-                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="profile" />
+            {view === 'dashboard' && (
+              <div className="space-y-8 animate-in fade-in duration-500">
+                <header className="flex justify-between items-end">
+                  <div>
+                    <h1 className="text-2xl font-bold text-slate-800">สวัสดี, {user?.name.split(' ')[0]}</h1>
+                    <p className="text-slate-500 text-xs">{user?.position}</p>
                   </div>
-                  <h2 className="text-xl font-bold text-slate-800">{user.name}</h2>
-                  <p className="text-indigo-500 font-bold text-xs uppercase tracking-widest mt-1 mb-6">{user.position}</p>
-                  <div className="grid grid-cols-2 gap-3 text-left">
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100"><p className="text-[9px] text-slate-400 font-bold uppercase">Staff ID</p><p className="font-bold text-slate-800">{user.staffId}</p></div>
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100"><p className="text-[9px] text-slate-400 font-bold uppercase">Site</p><p className="font-bold text-slate-800">{user.siteId}</p></div>
+                  <button onClick={() => setView('new')} className="bg-blue-600 text-white p-3 rounded-2xl shadow-lg active:scale-90 transition-all">
+                    <PlusCircle size={28} />
+                  </button>
+                </header>
+
+                <section className="grid grid-cols-2 gap-4">
+                  {balances.map(b => (
+                    <DashboardCard key={b.type} type={b.type} value={b.used} total={b.remain} onClick={() => setSelectedLeaveType(b.type)} />
+                  ))}
+                </section>
+
+                <section>
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">รายการล่าสุด</h2>
+                    <button className="text-blue-600 text-xs font-bold" onClick={() => setView('history')}>ดูทั้งหมด</button>
+                  </div>
+                  <div className="space-y-3">
+                    {requests.slice(0, 3).map(req => (
+                      <div key={req.id} className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${getLeaveTheme(req.type).bg} ${getLeaveTheme(req.type).text}`}>
+                            <Calendar size={18} />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-slate-800 text-xs truncate max-w-[120px]">{req.type.split(' (')[0]}</h4>
+                            <p className="text-[10px] text-slate-400">{req.startDate}</p>
+                          </div>
+                        </div>
+                        <StatusBadge status={req.status} />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </div>
+            )}
+            
+            {view === 'new' && (
+              <div className="space-y-6 animate-in slide-in-from-bottom-4">
+                <header className="flex items-center gap-3">
+                  <button onClick={() => setView('dashboard')} className="p-2 hover:bg-white rounded-full"><ChevronLeft size={24} /></button>
+                  <h1 className="text-xl font-bold">ยื่นใบลาใหม่</h1>
+                </header>
+                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-5">
+                   <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-400 uppercase">ประเภทการลา</label>
+                      <select id="leave-type-select" className="w-full bg-slate-50 border-none p-4 rounded-xl font-bold text-slate-700 outline-none ring-1 ring-slate-100 focus:ring-blue-600">
+                        {Object.values(LeaveType).map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                   </div>
+                   <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-400 uppercase">วันที่เริ่ม</label>
+                        <input id="start-date" type="date" className="w-full bg-slate-50 p-4 rounded-xl font-bold text-xs" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-400 uppercase">วันที่สิ้นสุด</label>
+                        <input id="end-date" type="date" className="w-full bg-slate-50 p-4 rounded-xl font-bold text-xs" />
+                      </div>
+                   </div>
+                   <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-400 uppercase">เหตุผลการลา</label>
+                      <textarea id="leave-reason" className="w-full bg-slate-50 p-4 rounded-xl text-sm min-h-[100px]" placeholder="ระบุเหตุผลประกอบ..." />
+                   </div>
+                   <button 
+                    onClick={() => {
+                      const type = (document.getElementById('leave-type-select') as HTMLSelectElement).value as LeaveType;
+                      const startDate = (document.getElementById('start-date') as HTMLInputElement).value;
+                      const endDate = (document.getElementById('end-date') as HTMLInputElement).value;
+                      const reason = (document.getElementById('leave-reason') as HTMLTextAreaElement).value;
+                      if(startDate && endDate && reason) handleCreate({ type, startDate, endDate, reason });
+                      else alert('กรุณากรอกข้อมูลให้ครบ');
+                    }}
+                    className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold shadow-lg active:scale-95 transition-all"
+                  >
+                    ยืนยันการส่งข้อมูล
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {view === 'history' && (
+              <div className="space-y-6 animate-in fade-in">
+                 <h1 className="text-xl font-bold">ประวัติรายการ</h1>
+                 <div className="space-y-4">
+                   {requests.map(req => (
+                     <div key={req.id} className="bg-white p-5 rounded-3xl border border-slate-50 space-y-4 shadow-sm">
+                       <div className="flex justify-between items-start">
+                          <div className="flex gap-3">
+                            <div className={`p-2.5 rounded-xl ${getLeaveTheme(req.type).bg} ${getLeaveTheme(req.type).text}`}>
+                               <Calendar size={22} />
+                            </div>
+                            <div>
+                               <h3 className="font-bold text-slate-800 text-sm">{req.type.split(' (')[0]}</h3>
+                               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{req.startDate} — {req.totalDays} วัน</p>
+                            </div>
+                          </div>
+                          <StatusBadge status={req.status} />
+                       </div>
+                       <p className="text-xs text-slate-500 italic bg-slate-50 p-3 rounded-xl">"{req.reason}"</p>
+                       {req.status === LeaveStatus.PENDING && (
+                         <button onClick={() => handleAction(req.id, LeaveStatus.CANCELLED)} className="w-full py-2.5 text-[10px] font-bold text-rose-500 uppercase border border-rose-50 rounded-xl hover:bg-rose-50">ยกเลิกคำขอ</button>
+                       )}
+                       {req.approverReason && (
+                          <div className="mt-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
+                             <p className="text-[9px] font-bold text-indigo-600 uppercase mb-1">ความเห็นหัวหน้า: {req.approver}</p>
+                             <p className="text-xs text-slate-700">{req.approverReason}</p>
+                          </div>
+                       )}
+                     </div>
+                   ))}
+                 </div>
+              </div>
+            )}
+
+            {view === 'manager' && (
+              <div className="space-y-6 animate-in fade-in">
+                <h1 className="text-xl font-bold flex items-center gap-2">รอการอนุมัติ ({requests.filter(r => r.status === LeaveStatus.PENDING).length})</h1>
+                <div className="space-y-4">
+                  {requests.filter(r => r.status === LeaveStatus.PENDING).map(req => (
+                    <div key={req.id} className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 space-y-4">
+                      <div className="flex justify-between items-center">
+                         <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-slate-100 rounded-xl overflow-hidden">
+                              <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${req.staffId}`} alt="avatar" />
+                            </div>
+                            <div>
+                              <h3 className="font-bold text-slate-800 text-sm">{req.staffName}</h3>
+                              <p className="text-[10px] text-blue-500 font-bold">{req.siteId}</p>
+                            </div>
+                         </div>
+                      </div>
+                      <div className="p-4 bg-slate-50 rounded-2xl">
+                         <div className="flex justify-between items-center mb-1">
+                           <span className="text-[10px] font-bold text-slate-400 uppercase">{req.type.split(' (')[0]}</span>
+                           <span className="text-sm font-bold text-blue-600">{req.totalDays} วัน</span>
+                         </div>
+                         <p className="text-[10px] text-slate-500 font-medium">{req.startDate} — {req.endDate}</p>
+                      </div>
+                      <p className="text-xs text-slate-500 italic">"{req.reason}"</p>
+                      <div className="flex gap-2">
+                        <button onClick={() => handleAction(req.id, LeaveStatus.REJECTED)} className="flex-1 p-3 border border-slate-200 rounded-xl text-xs font-bold text-slate-500">ปฏิเสธ</button>
+                        <button onClick={() => handleAction(req.id, LeaveStatus.APPROVED)} className="flex-[2] bg-blue-600 text-white p-3 rounded-xl text-xs font-bold shadow-lg">อนุมัติ</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {view === 'profile' && (
+              <div className="space-y-8 text-center pt-4">
+                <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-100">
+                   <div className="w-28 h-28 bg-slate-50 rounded-[2rem] mx-auto flex items-center justify-center mb-6 shadow-inner overflow-hidden border-2 border-white">
+                    <img src={linePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.staffId}`} alt="avatar" className="rounded-full" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-slate-800">{user?.name}</h2>
+                  <p className="text-blue-600 font-bold text-xs uppercase tracking-wider mt-2 bg-blue-50 px-4 py-1.5 rounded-full inline-block">{user?.position}</p>
+                  
+                  <div className="grid grid-cols-2 gap-4 mt-8 text-left">
+                    <div className="p-4 bg-slate-50 rounded-2xl">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">รหัสพนักงาน</p>
+                      <p className="font-bold text-slate-800 text-xs">{user?.staffId}</p>
+                    </div>
+                    <div className="p-4 bg-slate-50 rounded-2xl">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">หน่วยงาน</p>
+                      <p className="font-bold text-slate-800 text-xs">{user?.siteId}</p>
+                    </div>
                   </div>
                 </div>
-                <button onClick={() => setIsLoggedIn(false)} className="w-full py-4 text-rose-500 font-bold bg-rose-50 rounded-2xl">ออกจากระบบ</button>
+                <button onClick={() => setIsLoggedIn(false)} className="w-full py-4 text-rose-500 font-bold text-sm bg-white border border-rose-100 rounded-[1.5rem] shadow-sm active:scale-95 transition-all">ออกจากระบบ</button>
               </div>
             )}
           </>
         )}
       </div>
 
-      {previewImage && <ImageModal src={previewImage} onClose={() => setPreviewImage(null)} />}
-
-      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-slate-100 px-6 py-3 flex justify-around items-center z-50">
+      {/* Nav */}
+      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-slate-100 px-8 py-4 flex justify-around items-center z-50 rounded-t-[2.5rem] shadow-[0_-10px_30px_rgba(0,0,0,0.03)]">
         {[
-          { icon: Home, label: 'หน้าแรก', view: 'dashboard' },
+          { icon: Home, label: 'หน้าหลัก', view: 'dashboard' },
           { icon: History, label: 'ประวัติ', view: 'history' },
-          ...(user.roleType === UserRole.SUPERVISOR ? [{ icon: ShieldCheck, label: 'อนุมัติ', view: 'manager' }] : []),
-          { icon: User, label: 'โปรไฟล์', view: 'profile' }
+          ...(user?.roleType === UserRole.SUPERVISOR ? [{ icon: ShieldCheck, label: 'อนุมัติ', view: 'manager' }] : []),
+          { icon: User, label: 'บัญชี', view: 'profile' }
         ].map((item) => (
           <button 
             key={item.view}
-            className={`flex flex-col items-center gap-1 transition-all ${view === item.view ? 'text-indigo-600' : 'text-slate-400'}`}
-            onClick={() => {
-              setView(item.view);
-              if (item.view !== 'new') setPrefillData(undefined);
-            }}
+            className={`flex flex-col items-center gap-1 transition-all ${view === item.view ? 'text-blue-600' : 'text-[#cbd5e1]'}`}
+            onClick={() => { setView(item.view); setSelectedLeaveType(null); }}
           >
-            <item.icon size={20} />
-            <span className="text-[9px] font-bold">{item.label}</span>
+            <item.icon size={22} strokeWidth={view === item.view ? 2.5 : 2} />
+            <span className={`text-[9px] font-bold uppercase tracking-wider ${view === item.view ? 'text-blue-600' : 'text-[#cbd5e1]'}`}>{item.label}</span>
           </button>
         ))}
       </nav>
