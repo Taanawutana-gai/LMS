@@ -31,6 +31,7 @@ function doGet(e) {
   e = e || { parameter: { action: "testConnection", sheetId: TARGET_SHEET_ID } };
   const action = e.parameter.action;
   const staffId = e.parameter.staffId;
+  const lineUserId = e.parameter.lineUserId;
   const sheetId = e.parameter.sheetId || TARGET_SHEET_ID;
 
   try {
@@ -49,9 +50,25 @@ function doGet(e) {
       });
     }
 
+    if (action === 'checkUserStatus') {
+      const sheet = ss.getSheetByName('Employ_DB');
+      const data = sheet.getDataRange().getValues();
+      // ค้นหาจาก LINE ID (Column 0)
+      const user = data.find(row => row[0] == lineUserId);
+      
+      if (user) {
+        return jsonResponse({
+          success: true,
+          profile: { lineUserId: user[0], staffId: user[1], name: user[2], siteId: user[3], roleType: user[4], position: user[5] }
+        });
+      }
+      return jsonResponse({ success: false, message: 'LINE ID not linked' });
+    }
+
     if (action === 'getProfile') {
       const sheet = ss.getSheetByName('Employ_DB');
       const data = sheet.getDataRange().getValues();
+      // ค้นหาจาก Staff ID (Column 1)
       const user = data.find(row => row[1] == staffId);
       
       if (user) {
