@@ -51,14 +51,6 @@ const getLeaveTheme = (type: LeaveType) => {
   }
 };
 
-const calculateDays = (start: string, end: string): number => {
-  if (!start || !end) return 0;
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-  const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-};
-
 const StatusBadge = ({ status }: { status: LeaveStatus }) => {
   const styles = {
     [LeaveStatus.PENDING]: 'bg-amber-100 text-amber-700 border-amber-200',
@@ -93,7 +85,7 @@ const DashboardCard: React.FC<{ type: LeaveType; value: number; total: number; o
           <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
             <div className={`h-full ${theme.color} transition-all duration-700`} style={{ width: `${Math.min(100, progress)}%` }} />
           </div>
-          <div className="text-[9px] font-bold text-slate-400 uppercase">ใช้ไป {value} วัน</div>
+          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">ใช้ไป {value} วัน</div>
         </div>
       )}
     </div>
@@ -111,17 +103,19 @@ const App: React.FC = () => {
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [staffIdInput, setStaffIdInput] = useState('');
   
-  const [lineUserId, setLineUserId] = useState('Initializing...');
+  const [lineUserId, setLineUserId] = useState('Checking...');
   const [linePicture, setLinePicture] = useState('');
   const [isLiffReady, setIsLiffReady] = useState(false);
   const [isDiagnosticOpen, setIsDiagnosticOpen] = useState(false);
   const [diagnosticInfo, setDiagnosticInfo] = useState<any>(null);
 
   useEffect(() => {
+    console.log("React: Effect triggered");
     const initLiff = async () => {
       try {
         const liff = (window as any).liff;
         if (liff) {
+          console.log("LIFF: Initializing with ID:", LIFF_ID);
           await liff.init({ liffId: LIFF_ID });
           if (liff.isLoggedIn()) {
             const profile = await liff.getProfile();
@@ -131,17 +125,25 @@ const App: React.FC = () => {
             setLineUserId('BROWSER_MODE');
           }
         } else {
-          setLineUserId('LIFF_SDK_NOT_FOUND');
+          console.warn("LIFF: SDK not found on window");
+          setLineUserId('LIFF_SDK_MISSING');
         }
       } catch (err) {
-        console.error('LIFF Init Error:', err);
+        console.error('LIFF: Init Error:', err);
         setLineUserId('INIT_ERROR');
       } finally {
         setIsLiffReady(true);
       }
     };
 
-    const timer = setTimeout(() => setIsLiffReady(true), 4000);
+    // Force transition after 3 seconds if LIFF hangs
+    const timer = setTimeout(() => {
+      if (!isLiffReady) {
+        console.log("LIFF: Initialization timeout, forcing transition");
+        setIsLiffReady(true);
+      }
+    }, 3000);
+
     initLiff();
     return () => clearTimeout(timer);
   }, []);
@@ -190,13 +192,14 @@ const App: React.FC = () => {
     }
   };
 
+  // While waiting for LIFF, show a React-based loader to confirm JS is working
   if (!isLiffReady) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
         <Loader2 className="animate-spin text-blue-600" size={32} />
         <div className="text-center">
           <p className="text-slate-800 font-bold">React Loaded</p>
-          <p className="text-slate-400 text-xs uppercase tracking-widest">Initializing LINE LIFF...</p>
+          <p className="text-slate-400 text-xs uppercase tracking-widest">Configuring Environment...</p>
         </div>
       </div>
     );
@@ -221,7 +224,7 @@ const App: React.FC = () => {
                 <div className="overflow-x-auto rounded-2xl border border-slate-100">
                   <table className="w-full text-[12px]">
                     <thead className="bg-slate-50">
-                      <tr>{diagnosticInfo.headers.map((h:any, i:number)=><th key={i} className="p-3 text-left">{h} h</th>)}</tr>
+                      <tr>{diagnosticInfo.headers.map((h:any, i:number)=><th key={i} className="p-3 text-left">{h}</th>)}</tr>
                     </thead>
                     <tbody>
                       {diagnosticInfo.sampleData.map((row:any[], i:number)=>(
