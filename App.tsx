@@ -4,7 +4,7 @@ import {
   Calendar, Home, PlusCircle, User, ShieldCheck, Clock, X, 
   ChevronLeft, Loader2, RefreshCcw, History, AlertCircle, 
   CheckCircle2, FileText, LogOut, Fingerprint, Search, MapPin, Hash, UserCircle,
-  MoreHorizontal
+  MoreHorizontal, Key, ScanFace
 } from 'lucide-react';
 import { 
   UserRole, LeaveType, LeaveStatus, LeaveRequest, LeaveBalance, UserProfile 
@@ -70,23 +70,18 @@ const DashboardCard: React.FC<{ type: LeaveType; used: number; remain: number }>
       <div className={`absolute inset-0 ${theme.bg} opacity-20 pointer-events-none`} />
 
       <div className="relative z-10">
-        {/* Label: 10px / Extrabold (800) for 3-column fit */}
         <h3 className={`text-[10px] font-[800] uppercase tracking-tight ${theme.text} leading-none mb-1 truncate`}>
           {theme.label}
         </h3>
         <div className="flex items-baseline gap-0.5">
-          {/* Value: 24px / Black (900) */}
           <span className="text-[24px] font-[900] text-slate-800 leading-none">{remain}</span>
-          {/* Unit: 9px / Semi Bold (600) */}
           <span className="text-[9px] font-[600] text-slate-400 uppercase">วัน</span>
         </div>
       </div>
 
       <div className="relative z-10 mt-auto">
         <div className="flex justify-between items-end mb-1">
-          {/* Used: 9px / Semi Bold (600) */}
           <span className="text-[9px] font-[600] text-slate-400 uppercase leading-none">ใช้ {used}</span>
-          {/* Total: 9px / Semi Bold (600) */}
           <span className="text-[9px] font-[600] text-slate-300 uppercase leading-none">/ {total}</span>
         </div>
         <div className="w-full bg-slate-100/50 rounded-full h-1 overflow-hidden">
@@ -105,6 +100,7 @@ const App: React.FC = () => {
   const [balances, setBalances] = useState<LeaveBalance[]>([]);
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [staffIdInput, setStaffIdInput] = useState('');
+  const [userIdInput, setUserIdInput] = useState('');
   const [linePicture, setLinePicture] = useState('');
   const [lineName, setLineName] = useState('');
   const [lineUserId, setLineUserId] = useState('');
@@ -125,6 +121,7 @@ const App: React.FC = () => {
             setLineName(profile.displayName);
             setLinePicture(profile.pictureUrl);
             setLineUserId(profile.userId);
+            setUserIdInput(profile.userId); // Auto-fill User ID from LIFF
             const u = await SheetService.checkUserStatus(profile.userId);
             if (u) { setUser(u); fetchData(u); setIsLoggedIn(true); }
           }
@@ -148,11 +145,15 @@ const App: React.FC = () => {
   };
 
   const handleLogin = async () => {
+    if (!staffIdInput.trim() || !userIdInput.trim()) {
+      alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+      return;
+    }
     setLoading(true);
     try {
       const p = await SheetService.getProfile(staffIdInput);
       if (p) {
-        await SheetService.linkLineId(staffIdInput, lineUserId);
+        await SheetService.linkLineId(staffIdInput, lineUserId || userIdInput);
         setUser(p); fetchData(p); setIsLoggedIn(true);
       } else alert('ไม่พบรหัสพนักงาน');
     } catch (e) { alert('เกิดข้อผิดพลาด'); }
@@ -200,13 +201,30 @@ const App: React.FC = () => {
             <h2 className="text-xl font-black text-slate-800">{lineName || 'LINE User'}</h2>
           </div>
           <div className="w-full space-y-4 text-left">
-            <div className="relative">
-              <Fingerprint className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-              <input value={staffIdInput} onChange={e=>setStaffIdInput(e.target.value)} className="w-full bg-white/80 pl-12 pr-4 py-4 rounded-2xl font-bold border-none ring-1 ring-slate-100 outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm" placeholder="รหัสพนักงาน" />
+            <div className="relative group">
+              <ScanFace className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors" size={18} />
+              <input 
+                value={userIdInput} 
+                onChange={e=>setUserIdInput(e.target.value)} 
+                readOnly={!!lineUserId}
+                className={`w-full ${lineUserId ? 'bg-slate-50/50 cursor-not-allowed text-slate-400' : 'bg-white/80'} pl-12 pr-4 py-4 rounded-2xl font-bold border-none ring-1 ring-slate-100 outline-none focus:ring-2 focus:ring-blue-500 transition-all text-[11px]`} 
+                placeholder="LINE User ID (อัตโนมัติ)" 
+              />
+              {lineUserId && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[8px] font-black text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded">DETECTED</span>}
+            </div>
+            <div className="relative group">
+              <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors" size={18} />
+              <input 
+                value={staffIdInput} 
+                onChange={e=>setStaffIdInput(e.target.value)} 
+                className="w-full bg-white/80 pl-12 pr-4 py-4 rounded-2xl font-bold border-none ring-1 ring-slate-100 outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm" 
+                placeholder="Staff ID (รหัสพนักงาน)" 
+              />
             </div>
             <button onClick={handleLogin} disabled={loading} className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs">
-              {loading ? <Loader2 className="animate-spin" /> : 'เข้าสู่ระบบ'}
+              {loading ? <Loader2 className="animate-spin" /> : 'ยืนยันเพื่อเข้าใช้งาน'}
             </button>
+            <p className="text-center text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-2">โปรดระบุรหัสพนักงานเพื่อเชื่อมต่อกับ LINE</p>
           </div>
         </div>
       </div>
