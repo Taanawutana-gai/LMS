@@ -214,7 +214,7 @@ const App: React.FC = () => {
             {linePicture ? <img src={linePicture} className="w-full h-full object-cover" alt="Profile" /> : <UserCircle size={80} className="text-slate-200 m-auto mt-2" />}
           </div>
           <div>
-            <p className="text-[11px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">Leave Online</p>
+            <p className="text-[11px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">Leave Management System</p>
             <h2 className="text-xl font-black text-slate-800">{lineName || 'LINE User'}</h2>
           </div>
           <div className="w-full space-y-4 text-left">
@@ -248,7 +248,7 @@ const App: React.FC = () => {
             <button onClick={handleLogin} disabled={loading} className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs mt-2">
               {loading ? <Loader2 className="animate-spin" /> : 'ตรวจสอบข้อมูลและยืนยัน'}
             </button>
-            <p className="text-center text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-2">ระบบจะตรวจสอบความถูกต้องของรหัสพนักงานก่อนดำเนินการ</p>
+            <p className="text-center text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-2">SMC Property Soft</p>
           </div>
         </div>
       </div>
