@@ -427,7 +427,9 @@ const App: React.FC = () => {
                 </div>
                 <div><h2 className="text-base font-black text-slate-800 leading-tight tracking-tight">{user?.name}</h2><p className="text-blue-600 font-bold text-[8px] uppercase tracking-widest mt-0.5">{user?.position}</p></div>
               </div>
-              <button onClick={() => setView('new')} className="bg-blue-600 text-white p-3 rounded-xl active:scale-90 transition-all shadow-lg shadow-blue-100"><PlusCircle size={20} /></button>
+              <button onClick={() => setView('new')} className="bg-blue-600 text-white p-3 rounded-xl active:scale-90 transition-all shadow-lg shadow-blue-100 flex items-center justify-center" title="ยื่นใบลาส่วนตัว">
+                <PlusCircle size={20} />
+              </button>
             </section>
 
             <div className="grid grid-cols-3 gap-2.5">
@@ -513,9 +515,18 @@ const App: React.FC = () => {
           <div className="space-y-6 animate-in slide-in-from-right-10 duration-300">
             <header className="flex items-center gap-3">
               <button onClick={() => setView('dashboard')} className="p-2 bg-white rounded-xl text-slate-400 shadow-sm"><ChevronLeft size={20} /></button>
-              <h2 className="text-lg font-black text-slate-800 tracking-tight">ยื่นใบลาใหม่</h2>
+              <div>
+                <h2 className="text-lg font-black text-slate-800 tracking-tight">ยื่นใบลาใหม่</h2>
+                <p className="text-[8px] font-black text-blue-500 uppercase tracking-widest mt-0.5">Personal Leave Request</p>
+              </div>
             </header>
             <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-50 space-y-6">
+              <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl">
+                 <p className="text-[10px] text-blue-700 font-bold leading-relaxed">
+                   บันทึกการลาสำหรับ: <span className="font-black">{user?.name}</span> ({user?.staffId})
+                 </p>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-[9px] font-black text-slate-400 uppercase ml-1 tracking-widest">ประเภทการลา</label>
                 <select value={newReq.type} onChange={e => setNewReq({...newReq, type: e.target.value as LeaveType})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-[12px] text-slate-700 ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500 transition-all appearance-none">
@@ -597,7 +608,7 @@ const App: React.FC = () => {
           ...(isEligibleManager ? [{ icon: CheckSquare, label: 'อนุมัติ', v: 'approval' }] : []), 
           { icon: User, label: 'ฉัน', v: 'profile' }
         ].map(item => (
-          <button key={item.v} onClick={() => setView(item.v)} className={`flex flex-col items-center gap-1.5 transition-all px-4 group relative ${view === item.v ? 'text-blue-600' : 'text-slate-300 hover:text-slate-400'}`}>
+          <button key={item.v} onClick={() => setView(item.v)} className={`flex flex-col items-center gap-1.5 transition-all px-4 group relative ${view === item.v ? 'text-blue-600' : 'text-slate-300 hover:text-blue-600 hover:bg-slate-50'}`}>
             {view === item.v && <div className="absolute -top-1 w-1 h-1 bg-blue-600 rounded-full animate-bounce" />}
             <item.icon size={22} strokeWidth={view === item.v ? 3 : 2} className={`transition-transform duration-300 ${view === item.v ? 'scale-110' : 'group-active:scale-90'}`} />
             <span className={`text-[8px] font-black uppercase tracking-[0.15em] transition-opacity ${view === item.v ? 'opacity-100' : 'opacity-60'}`}>{item.label}</span>
