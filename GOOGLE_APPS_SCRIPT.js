@@ -1,7 +1,14 @@
 
 /**
  * Leave Management System - Backend Script
- * Required Scopes:
+ * 
+ * หากเจอปัญหา "ไม่ได้รับอนุญาตให้เรียกใช้ DriveApp":
+ * 1. เลือกฟังก์ชัน 'triggerPermissionCheck' ที่เมนูด้านบน
+ * 2. กดปุ่ม 'เรียกใช้' (Run)
+ * 3. กดยอมรับสิทธิ์ในหน้าต่างที่เด้งขึ้นมา (ถ้ามี)
+ * 4. สำคัญ: หลังจากกดอนุญาตแล้ว ให้กด Deploy -> New Deployment (หรือ Manage Deployments -> Edit -> New Version) อีกครั้ง
+ * 
+ * Scopes:
  * - https://www.googleapis.com/auth/spreadsheets
  * - https://www.googleapis.com/auth/drive
  */
@@ -10,19 +17,26 @@ const TARGET_SHEET_ID = "1q9elvW0_-OkAi8vBwHg38579Z1ozCgeEC27fnLaYBtk";
 const ATTACHMENT_FOLDER_ID = "1Or-p8MwFH35PbROikrvjDS3yQ-V6IOGr";
 
 /**
- * ฟังก์ชันสำหรับบังคับให้ระบบแสดงหน้าต่างขอสิทธิ์เข้าถึง Drive
- * วิธีใช้: เลือกฟังก์ชันนี้ในเมนูด้านบนแล้วกด "เรียกใช้" (Run)
+ * ฟังก์ชันสำหรับกระตุ้นหน้าต่างขออนุญาตสิทธิ์ (Authorization Dialog)
+ * ต้องรันฟังก์ชันนี้ในหน้า Editor เท่านั้น
  */
-function forceAuth() {
+function triggerPermissionCheck() {
   try {
     const folder = DriveApp.getFolderById(ATTACHMENT_FOLDER_ID);
-    Logger.log("เข้าถึงโฟลเดอร์สำเร็จ: " + folder.getName());
+    const testFile = folder.createFile("permission_test.txt", "This is a test to trigger permissions.");
+    Logger.log("Permission granted. Created test file: " + testFile.getUrl());
+    testFile.setTrashed(true); // ลบไฟล์ทดสอบทันที
+    
     const ss = SpreadsheetApp.openById(TARGET_SHEET_ID);
-    Logger.log("เข้าถึงชีตสำเร็จ: " + ss.getName());
-    Browser.msgBox("ยืนยันสิทธิ์สำเร็จแล้ว! กรุณาทำการ Deploy เวอร์ชันใหม่ (New Version) อีกครั้ง");
+    Logger.log("Spreadsheet access OK: " + ss.getName());
+    
+    Logger.log("--- สรุปขั้นตอนถัดไป ---");
+    Logger.log("1. ยืนยันสิทธิ์ในระบบสำเร็จแล้ว");
+    Logger.log("2. กรุณาคลิกที่ปุ่ม 'ทำให้ใช้งานได้' (Deploy) -> 'จัดการการทำให้ใช้งานได้' (Manage Deployments)");
+    Logger.log("3. กดรูปดินสอ (แก้ไข) -> เลือก 'เวอร์ชันใหม่' (New Version)");
+    Logger.log("4. กด 'ทำให้ใช้งานได้' (Deploy) อีกครั้ง เพื่อให้ Web App ได้รับสิทธิ์ที่เพิ่งอนุญาตนี้");
   } catch (e) {
-    Logger.log("เกิดข้อผิดพลาด: " + e.toString());
-    throw e;
+    Logger.log("เกิดข้อผิดพลาดในการขอสิทธิ์: " + e.toString());
   }
 }
 
@@ -88,17 +102,14 @@ function doGet(e) {
 
 function doPost(e) {
   if (!e || !e.postData || !e.postData.contents) {
-    return jsonResponse({ 
-      success: false, 
-      message: "Warning: Script was run manually. Please test by submitting a request from the web app." 
-    });
+    return jsonResponse({ success: false, message: "Manual run detected." });
   }
 
   let body;
   try {
     body = JSON.parse(e.postData.contents);
   } catch (err) {
-    return jsonResponse({ success: false, message: "Invalid JSON format" });
+    return jsonResponse({ success: false, message: "Invalid JSON" });
   }
 
   const ss = SpreadsheetApp.openById(body.sheetId || TARGET_SHEET_ID);
@@ -115,7 +126,6 @@ function doPost(e) {
         const mimeType = parts[0].match(/:(.*?);/)[1];
         const base64Data = parts[1];
         
-        // Fix: Explicitly cast staffId to String to prevent .replace() error if numeric
         const cleanStaffId = String(body.staffId || "unknown").replace(/[^a-zA-Z0-9]/g, '_');
         const fileName = `${id}_${cleanStaffId}`;
         
