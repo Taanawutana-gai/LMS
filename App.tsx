@@ -60,10 +60,11 @@ const RequestCard: React.FC<{
   req: LeaveRequest; 
   user: UserProfile | null;
   isManagerView?: boolean;
+  isDashboardView?: boolean;
   onViewImage: (url: string) => void;
   onAction: (id: string, status: LeaveStatus, reason?: string) => void;
   onResubmit?: (req: LeaveRequest) => void;
-}> = ({ req, user, isManagerView, onViewImage, onAction, onResubmit }) => {
+}> = ({ req, user, isManagerView, isDashboardView, onViewImage, onAction, onResubmit }) => {
   const [showRejectInput, setShowRejectInput] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   
@@ -87,14 +88,14 @@ const RequestCard: React.FC<{
                 <span className="text-[7px] font-bold text-slate-500 bg-white/5 px-1 rounded uppercase">{req.siteId}</span>
               </div>
             )}
-            <h5 className={`font-black text-[11px] leading-tight ${isManagerView ? 'text-white' : 'text-slate-800'}`}>{theme.label}</h5>
+            <h5 className={`font-black ${isDashboardView ? 'text-[15px]' : 'text-[11px]'} leading-tight ${isManagerView ? 'text-white' : 'text-slate-800'}`}>{theme.label}</h5>
             <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">
               {formatDate(req.startDate)} <span className="mx-0.5 text-slate-200">|</span> {formatDate(req.endDate)}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {req.attachmentUrl && req.attachmentUrl.startsWith('http') && (
+          {!isDashboardView && req.attachmentUrl && req.attachmentUrl.startsWith('http') && (
             <button onClick={() => onViewImage(req.attachmentUrl!)} className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${isManagerView ? 'bg-white/5 text-slate-400' : 'bg-slate-50 text-slate-300'} hover:text-blue-500`}>
               <Search size={12} />
             </button>
@@ -103,18 +104,18 @@ const RequestCard: React.FC<{
         </div>
       </div>
       
-      <div className="flex justify-between items-center text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-         <span className={`${isManagerView ? 'bg-white/5' : 'bg-slate-50'} px-2 py-0.5 rounded-md font-black`}>{req.totalDays} วัน</span>
+      <div className={`flex justify-between items-center ${isDashboardView ? 'text-[12px]' : 'text-[9px]'} font-bold text-slate-400 uppercase tracking-tighter`}>
+         <span className={`${isManagerView ? 'bg-white/5' : 'bg-slate-50'} px-2 py-0.5 rounded-md font-black`}>{req.totalDays} <span className={isDashboardView ? 'text-[12px]' : ''}>วัน</span></span>
          {req.approver && <span className="text-slate-300">By: {req.approver}</span>}
       </div>
 
-      {req.reason && (
+      {!isDashboardView && req.reason && (
          <div className={`p-2.5 rounded-xl border ${isManagerView ? 'bg-white/5 border-white/5' : 'bg-slate-50/50 border-slate-50'}`}>
             <p className={`text-[9px] leading-relaxed italic ${isManagerView ? 'text-slate-400' : 'text-slate-500'}`}>" {req.reason} "</p>
          </div>
       )}
 
-      {isRejected && req.approverReason && (
+      {isRejected && req.approverReason && !isDashboardView && (
         <div className="bg-rose-500/10 p-2 rounded-lg border border-rose-500/20">
            <p className="text-[8px] font-black text-rose-500 uppercase mb-0.5">Note from Approver:</p>
            <p className="text-[9px] text-rose-400 leading-tight italic">"{req.approverReason}"</p>
@@ -122,7 +123,7 @@ const RequestCard: React.FC<{
       )}
 
       <div className={`pt-2 border-t flex gap-2 ${isManagerView ? 'border-white/5' : 'border-slate-50'}`}>
-         {!isManagerView && isPending && isOwner && (
+         {!isManagerView && isPending && isOwner && !isDashboardView && (
             <button 
               onClick={() => window.confirm('ยกเลิกใบลาใช่หรือไม่?') && onAction(req.id, LeaveStatus.CANCELLED)}
               className="flex items-center gap-1.5 text-slate-400 hover:text-rose-500 transition-colors py-1 px-2 rounded-md hover:bg-rose-50"
@@ -132,7 +133,7 @@ const RequestCard: React.FC<{
             </button>
          )}
          
-         {!isManagerView && isRejected && isOwner && onResubmit && (
+         {!isManagerView && isRejected && isOwner && onResubmit && !isDashboardView && (
             <button 
               onClick={() => onResubmit(req)}
               className="flex-1 flex items-center justify-center gap-1.5 bg-blue-600 text-white py-2 rounded-xl active:scale-95 transition-all shadow-md shadow-blue-100"
@@ -184,16 +185,16 @@ const DashboardCard: React.FC<{ type: LeaveType; used: number; remain: number }>
   return (
     <div className={`relative overflow-hidden bg-white rounded-xl border-l-4 ${theme.border} shadow-sm transition-all active:scale-95 h-[100px] flex flex-col justify-between p-3`}>
       <div className="relative z-10">
-        <h3 className={`text-[15px] font-[800] uppercase tracking-tight ${theme.text} leading-none mb-1 truncate`}>{theme.label}</h3>
+        <h3 className={`text-[17px] font-[800] uppercase tracking-tight ${theme.text} leading-none mb-1 truncate`}>{theme.label}</h3>
         <div className="flex items-baseline gap-0.5">
           <span className="text-[24px] font-[900] text-slate-800 leading-none">{remain}</span>
-          <span className="text-[13px] font-[600] text-slate-400 uppercase">วัน</span>
+          <span className="text-[14px] font-[600] text-slate-400 uppercase">วัน</span>
         </div>
       </div>
       <div className="mt-auto">
         <div className="flex justify-between items-end mb-1">
-          <span className="text-[12px] font-[600] text-slate-400 uppercase leading-none">ใช้ {used}</span>
-          <span className="text-[11px] font-[600] text-slate-300 uppercase leading-none">/ {total}</span>
+          <span className="text-[13px] font-[600] text-slate-400 uppercase leading-none">ใช้ {used}</span>
+          <span className="text-[12px] font-[600] text-slate-300 uppercase leading-none">/ {total}</span>
         </div>
         <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
           <div className={`h-full ${theme.color}`} style={{ width: `${progress}%` }} />
@@ -424,7 +425,7 @@ const App: React.FC = () => {
       <header className="bg-white/80 backdrop-blur-md px-6 py-4 flex justify-between items-center sticky top-0 z-40 border-b border-slate-100">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg"><Calendar size={16} strokeWidth={3} /></div>
-          <div><h1 className="font-black text-slate-800 text-sm leading-none tracking-tight">LMS</h1><p className="text-[7px] font-black text-blue-500 uppercase tracking-widest mt-0.5">Workflow Online</p></div>
+          <div><h1 className="font-black text-slate-800 text-sm leading-none tracking-tight">LMS</h1><p className="text-[7px] font-black text-blue-500 uppercase tracking-widest mt-0.5">Designed by SMC</p></div>
         </div>
         <div className="flex items-center gap-2">
            {isEligibleManager && (
@@ -455,24 +456,24 @@ const App: React.FC = () => {
 
             <div className="grid grid-cols-3 gap-2.5">
               {balances.length > 0 ? balances.map(b => <DashboardCard key={b.type} type={b.type} used={b.used} remain={b.remain} />) : (
-                <div className="col-span-3 py-8 text-center bg-white/50 border border-dashed rounded-3xl text-[14px] text-slate-300 font-black uppercase tracking-widest">กำลังดึงข้อมูลสิทธิ์การลา...</div>
+                <div className="col-span-3 py-8 text-center bg-white/50 border border-dashed rounded-3xl text-[16px] text-slate-300 font-black uppercase tracking-widest">กำลังดึงข้อมูลสิทธิ์การลา...</div>
               )}
             </div>
 
             <section className="space-y-4">
               <div className="flex items-center justify-between px-1">
-                <h3 className="text-[16px] font-black text-slate-400 uppercase tracking-[0.2em]">รายการลาล่าสุด</h3>
-                <button onClick={() => setView('history')} className="text-[13px] font-black text-blue-500 uppercase tracking-widest hover:underline">ดูทั้งหมด</button>
+                <h3 className="text-[18px] font-black text-slate-400 uppercase tracking-[0.2em]">รายการลาล่าสุด</h3>
+                <button onClick={() => setView('history')} className="text-[14px] font-black text-blue-500 uppercase tracking-widest hover:underline">ดูทั้งหมด</button>
               </div>
               <div className="space-y-3">
                 {myRequests.length > 0 ? (
                   myRequests.slice(0, 3).map(req => (
-                    <RequestCard key={req.id} req={req} user={user} onViewImage={setZoomImg} onAction={handleAction} onResubmit={handleResubmit} />
+                    <RequestCard key={req.id} req={req} user={user} isDashboardView onViewImage={setZoomImg} onAction={handleAction} onResubmit={handleResubmit} />
                   ))
                 ) : (
                   <div className="py-12 text-center bg-white/40 border border-dashed rounded-[2.5rem] flex flex-col items-center gap-3">
                     <History size={24} className="text-slate-200" />
-                    <p className="text-[15px] text-slate-300 font-black uppercase tracking-widest">ไม่พบประวัติการลา</p>
+                    <p className="text-[16px] text-slate-300 font-black uppercase tracking-widest">ไม่พบประวัติการลา</p>
                   </div>
                 )}
               </div>
