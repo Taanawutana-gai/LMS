@@ -214,7 +214,7 @@ const App: React.FC = () => {
       appliedDate: new Date().toISOString().split('T')[0]
     });
     if (res.success) { 
-      alert('ส่งคำขอสำเร็จ'); 
+      alert('ส่งคำขอสำเร็จ รูปภาพจะถูกจัดเก็บลง Google Drive'); 
       fetchData(user!); 
       setView('dashboard'); 
       setNewReq({type: LeaveType.ANNUAL, startDate: '', endDate: '', reason: '', attachment: ''}); 

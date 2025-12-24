@@ -2,7 +2,7 @@
 import { UserProfile, LeaveRequest, RawLeaveBalance, LeaveStatus } from './types.ts';
 
 const SHEET_ID = '1q9elvW0_-OkAi8vBwHg38579Z1ozCgeEC27fnLaYBtk';
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwUOt2TpnHcAw9XwYSBCyiuAe16zaolrmQqN7xeTnvKb9GKswTCJ1S8SgEyADtK-tN5jg/exec'; 
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxLPfVhutu9T4TxBX-98W5u6ItLcccAMC9xw2inaH80jjsWVLPkeXGMDmTd552hjl3bzA/exec'; 
 
 export const SheetService = {
   async testConnection(): Promise<any> {

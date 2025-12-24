@@ -1,5 +1,6 @@
 
 const TARGET_SHEET_ID = "1q9elvW0_-OkAi8vBwHg38579Z1ozCgeEC27fnLaYBtk";
+const ATTACHMENT_FOLDER_NAME = "LMS_Attachments";
 
 function doGet(e) {
   e = e || { parameter: { action: "testConnection", sheetId: TARGET_SHEET_ID } };
@@ -61,12 +62,53 @@ function doGet(e) {
 function doPost(e) {
   const body = JSON.parse(e.postData.contents);
   const ss = SpreadsheetApp.openById(body.sheetId || TARGET_SHEET_ID);
+  
   if (body.action === 'addRequest') {
     const sheet = ss.getSheetByName('Leave_Requests');
     const id = 'REQ-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-    sheet.appendRow([new Date().toISOString().split('T')[0], id, body.staffId, body.staffName, body.siteId, body.type, body.startDate, body.endDate, body.totalDays, body.reason, 'Pending', body.attachmentUrl || '']);
-    return jsonResponse({ success: true, id });
+    
+    // Handle Attachment Upload to Google Drive
+    let fileUrl = "";
+    if (body.attachment && body.attachment.includes("base64,")) {
+      try {
+        let folder;
+        const folders = DriveApp.getFoldersByName(ATTACHMENT_FOLDER_NAME);
+        if (folders.hasNext()) {
+          folder = folders.next();
+        } else {
+          folder = DriveApp.createFolder(ATTACHMENT_FOLDER_NAME);
+        }
+        
+        const parts = body.attachment.split(",");
+        const mimeType = parts[0].match(/:(.*?);/)[1];
+        const base64Data = parts[1];
+        const blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType, id + "_attachment");
+        const file = folder.createFile(blob);
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        fileUrl = file.getUrl();
+      } catch (err) {
+        fileUrl = "Error saving attachment: " + err.toString();
+      }
+    }
+
+    sheet.appendRow([
+      new Date().toISOString().split('T')[0], 
+      id, 
+      body.staffId, 
+      body.staffName, 
+      body.siteId, 
+      body.type, 
+      body.startDate, 
+      body.endDate, 
+      body.totalDays, 
+      body.reason, 
+      'Pending', 
+      fileUrl
+    ]);
+    
+    return jsonResponse({ success: true, id, fileUrl });
   }
+  
   if (body.action === 'updateStatus') {
     const sheet = ss.getSheetByName('Leave_Requests');
     const data = sheet.getDataRange().getValues();
@@ -80,12 +122,14 @@ function doPost(e) {
       return jsonResponse({ success: true });
     }
   }
+  
   if (body.action === 'linkLineId') {
     const sheet = ss.getSheetByName('Employ_DB');
     const data = sheet.getDataRange().getValues();
     const idx = data.findIndex(r => r[1] == body.staffId);
     if (idx !== -1) { sheet.getRange(idx+1, 1).setValue(body.lineUserId); return jsonResponse({ success: true }); }
   }
+  
   return jsonResponse({ success: false });
 }
 
@@ -103,7 +147,7 @@ function updateBalances(ss, req, status) {
     const curUsed = parseFloat(sheet.getRange(row, 16).getValue() || 0);
     sheet.getRange(row, 16).setValue(curUsed + 1);
     const curOtherRemain = parseFloat(sheet.getRange(row, 18).getValue() || 0);
-    sheet.getRange(row, 18).setValue(curOtherRemain + 1); // เพิ่มวันหยุดให้อีก 1 วันในช่อง 'ลาอื่นๆ'
+    sheet.getRange(row, 18).setValue(curOtherRemain + 1);
   } else {
     const map = {
       'ลาพักร้อน (Annual Leave)': [4, 5],
