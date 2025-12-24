@@ -94,13 +94,13 @@ export const SheetService = {
     }
   },
 
-  async updateRequestStatus(requestId: string, status: LeaveStatus, approver?: string): Promise<boolean> {
+  async updateRequestStatus(requestId: string, status: LeaveStatus, approver?: string, reason?: string): Promise<boolean> {
     try {
       const response = await fetch(SCRIPT_URL, {
         method: 'POST',
         redirect: 'follow',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'updateStatus', sheetId: SHEET_ID, requestId, status, approver })
+        body: JSON.stringify({ action: 'updateStatus', sheetId: SHEET_ID, requestId, status, approver, reason })
       });
       const data = await response.json();
       return data.success;

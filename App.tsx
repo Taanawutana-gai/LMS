@@ -4,8 +4,8 @@ import {
   Calendar, Home, PlusCircle, User, ShieldCheck, Clock, X, 
   ChevronLeft, Loader2, RefreshCcw, History, AlertCircle, 
   CheckCircle2, FileText, LogOut, Search, MapPin, Hash, UserCircle,
-  Key, ScanFace, AlertTriangle, CheckSquare, Camera, Paperclip, 
-  Image as ImageIcon, Trash2, RotateCcw
+  Key, ScanFace, AlertTriangle, CheckSquare, Camera, Trash2, RotateCcw, 
+  Send
 } from 'lucide-react';
 import { 
   UserRole, LeaveType, LeaveStatus, LeaveRequest, LeaveBalance, UserProfile 
@@ -112,6 +112,8 @@ const App: React.FC = () => {
   const [lineUserId, setLineUserId] = useState('');
   const [zoomImg, setZoomImg] = useState<string | null>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [newReq, setNewReq] = useState({
@@ -222,10 +224,12 @@ const App: React.FC = () => {
     setLoading(false);
   };
 
-  const handleAction = async (id: string, status: LeaveStatus) => {
+  const handleAction = async (id: string, status: LeaveStatus, reason?: string) => {
     setLoading(true);
-    await SheetService.updateRequestStatus(id, status, user?.name);
+    await SheetService.updateRequestStatus(id, status, user?.name, reason);
     fetchData(user!);
+    setRejectingId(null);
+    setRejectReason('');
     setLoading(false);
   };
 
@@ -246,37 +250,57 @@ const App: React.FC = () => {
     setView('new');
   };
 
-  const RequestCard = ({ req }: { req: LeaveRequest }) => {
+  const RequestCard = ({ req, isManagerView }: { req: LeaveRequest; isManagerView?: boolean }) => {
     const theme = getLeaveTheme(req.type);
+    const isOwner = String(req.staffId) === String(user?.staffId);
+    const isPending = req.status === LeaveStatus.PENDING;
+    const isRejected = req.status === LeaveStatus.REJECTED;
+
     return (
-      <div key={req.id} className="bg-white p-4 rounded-2xl border border-slate-50 shadow-sm space-y-3 transition-all hover:bg-slate-50/50">
+      <div key={req.id} className={`${isManagerView ? 'bg-white/5 border-white/5' : 'bg-white border-slate-50 shadow-sm'} p-4 rounded-2xl border space-y-3 transition-all group relative overflow-hidden`}>
+        {isManagerView && <div className={`absolute top-0 left-0 w-1 h-full ${theme.color}`} />}
+        
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">
             <div className={`w-1.5 h-1.5 rounded-full ${theme.color}`} />
             <div>
-              <h5 className="font-black text-[11px] text-slate-800 leading-tight">{theme.label}</h5>
+              {isManagerView && <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest leading-none mb-1">{req.staffName}</p>}
+              <h5 className={`font-black text-[11px] ${isManagerView ? 'text-white' : 'text-slate-800'} leading-tight`}>{theme.label}</h5>
               <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">
                 {formatDate(req.startDate)} <span className="mx-0.5 text-slate-200">|</span> {formatDate(req.endDate)}
               </p>
             </div>
           </div>
-          <StatusBadge status={req.status} />
+          <div className="flex items-center gap-2">
+            {req.attachmentUrl && (
+              <button onClick={()=>setZoomImg(req.attachmentUrl!)} className={`w-7 h-7 ${isManagerView ? 'bg-white/5 text-slate-400' : 'bg-slate-50 text-slate-300'} rounded-lg flex items-center justify-center hover:text-blue-500 transition-colors`}>
+                <Search size={12} />
+              </button>
+            )}
+            <StatusBadge status={req.status} />
+          </div>
         </div>
         
-        <div className="flex justify-between items-center text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-           <span className="bg-slate-50 px-2 py-0.5 rounded-md font-black">{req.totalDays} วัน</span>
+        <div className={`flex justify-between items-center text-[9px] font-bold text-slate-400 uppercase tracking-tighter`}>
+           <span className={`${isManagerView ? 'bg-white/5' : 'bg-slate-50'} px-2 py-0.5 rounded-md font-black`}>{req.totalDays} วัน</span>
            {req.approver && <span className="text-slate-300">Approver: {req.approver}</span>}
         </div>
 
-        {req.status === LeaveStatus.REJECTED && req.approverReason && (
-          <div className="bg-rose-50/50 p-2 rounded-lg border border-rose-100">
-             <p className="text-[8px] font-black text-rose-600 uppercase mb-0.5">Reason for rejection:</p>
-             <p className="text-[9px] text-rose-500 leading-tight italic">"{req.approverReason}"</p>
+        {req.reason && (
+           <div className={`${isManagerView ? 'bg-white/5 border-white/5' : 'bg-slate-50/50 border-slate-50'} p-2.5 rounded-xl border`}>
+              <p className={`text-[9px] ${isManagerView ? 'text-slate-400' : 'text-slate-500'} leading-relaxed italic`}>" {req.reason} "</p>
+           </div>
+        )}
+
+        {isRejected && req.approverReason && (
+          <div className="bg-rose-500/5 p-2 rounded-lg border border-rose-500/10">
+             <p className="text-[8px] font-black text-rose-500 uppercase mb-0.5">Note from Approver:</p>
+             <p className="text-[9px] text-rose-400 leading-tight italic">"{req.approverReason}"</p>
           </div>
         )}
 
-        <div className="pt-2 border-t border-slate-50 flex gap-2">
-           {req.status === LeaveStatus.PENDING && (
+        <div className={`pt-2 ${isManagerView ? 'border-t border-white/5' : 'border-t border-slate-50'} flex gap-2`}>
+           {!isManagerView && isPending && isOwner && (
               <button 
                 onClick={() => handleCancelRequest(req.id)}
                 className="flex items-center gap-1.5 text-slate-400 hover:text-rose-500 transition-colors py-1 px-2 rounded-md hover:bg-rose-50"
@@ -285,7 +309,7 @@ const App: React.FC = () => {
                 <span className="text-[9px] font-black uppercase tracking-widest">ยกเลิก</span>
               </button>
            )}
-           {req.status === LeaveStatus.REJECTED && (
+           {!isManagerView && isRejected && isOwner && (
               <button 
                 onClick={() => handleResubmit(req)}
                 className="flex-1 flex items-center justify-center gap-1.5 bg-blue-600 text-white py-2 rounded-xl active:scale-95 transition-all shadow-md shadow-blue-100"
@@ -293,6 +317,37 @@ const App: React.FC = () => {
                 <RotateCcw size={14} />
                 <span className="text-[10px] font-black uppercase tracking-widest">ยื่นใหม่</span>
               </button>
+           )}
+
+           {isManagerView && isPending && (
+             <div className="w-full flex flex-col gap-2">
+               {rejectingId === req.id ? (
+                 <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                   <input 
+                     autoFocus
+                     value={rejectReason}
+                     onChange={e => setRejectReason(e.target.value)}
+                     placeholder="เหตุผลการปฏิเสธ..."
+                     className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-[10px] text-white placeholder:text-slate-600 outline-none focus:border-rose-500/50"
+                   />
+                   <div className="flex gap-2">
+                     <button 
+                       disabled={!rejectReason.trim()}
+                       onClick={() => handleAction(req.id, LeaveStatus.REJECTED, rejectReason)}
+                       className="flex-1 bg-rose-600 text-white font-black py-2 rounded-xl text-[9px] uppercase tracking-widest disabled:opacity-30 active:scale-95 transition-all"
+                     >
+                       Confirm Reject
+                     </button>
+                     <button onClick={() => setRejectingId(null)} className="p-2 text-slate-500 hover:text-white transition-colors"><X size={16}/></button>
+                   </div>
+                 </div>
+               ) : (
+                 <div className="flex gap-2">
+                   <button onClick={()=>handleAction(req.id, LeaveStatus.APPROVED)} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-black py-2.5 rounded-xl text-[9px] uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-blue-600/20">Approve</button>
+                   <button onClick={()=>setRejectingId(req.id)} className="flex-1 bg-white/5 hover:bg-white/10 text-white font-black py-2.5 rounded-xl text-[9px] uppercase tracking-widest active:scale-95 transition-all border border-white/10">Reject</button>
+                 </div>
+               )}
+             </div>
            )}
         </div>
       </div>
@@ -409,8 +464,8 @@ const App: React.FC = () => {
                 <button onClick={()=>setView('history')} className="text-[8px] font-black text-blue-500 uppercase tracking-widest">ดูทั้งหมด</button>
               </div>
               <div className="space-y-2">
-                {requests.filter(r => r.staffId === user?.staffId).length > 0 ? (
-                  requests.filter(r => r.staffId === user?.staffId).slice(0, 3).map(req => (
+                {requests.filter(r => String(r.staffId) === String(user?.staffId)).length > 0 ? (
+                  requests.filter(r => String(r.staffId) === String(user?.staffId)).slice(0, 3).map(req => (
                     <RequestCard key={req.id} req={req} />
                   ))
                 ) : (
@@ -437,45 +492,14 @@ const App: React.FC = () => {
               <div className="flex items-center justify-between relative z-10">
                 <h3 className="font-black text-[9px] uppercase tracking-widest opacity-60">รายการรออนุมัติ</h3>
                 <span className="px-2 py-0.5 bg-blue-600 rounded-full text-[8px] font-black uppercase">
-                  {requests.filter(r => r.status === LeaveStatus.PENDING && r.staffId !== user?.staffId).length} รายการ
+                  {requests.filter(r => r.status === LeaveStatus.PENDING && String(r.staffId) !== String(user?.staffId)).length} รายการ
                 </span>
               </div>
               
               <div className="space-y-3 relative z-10">
-                {requests.filter(r => r.status === LeaveStatus.PENDING && r.staffId !== user?.staffId).length > 0 ? (
-                  requests.filter(r => r.status === LeaveStatus.PENDING && r.staffId !== user?.staffId).map(req => (
-                    <div key={req.id} className="bg-white/5 rounded-2xl p-4 border border-white/5 hover:border-blue-500/30 transition-all group">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="space-y-1">
-                          <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest leading-none">{req.staffName}</p>
-                          <div className="flex items-center gap-2">
-                             <div className={`w-1.5 h-1.5 rounded-full ${getLeaveTheme(req.type).color}`} />
-                             <h4 className="font-bold text-xs">{getLeaveTheme(req.type).label}</h4>
-                          </div>
-                          <div className="flex items-center gap-2 mt-1">
-                             <Clock size={10} className="text-slate-500" />
-                             <p className="text-[9px] text-slate-400 font-medium">{formatDate(req.startDate)} — {formatDate(req.endDate)}</p>
-                             <span className="text-[9px] text-blue-400/80 font-black px-1.5 py-0.5 bg-blue-500/10 rounded">({req.totalDays} วัน)</span>
-                          </div>
-                        </div>
-                        {req.attachmentUrl && (
-                          <button onClick={()=>setZoomImg(req.attachmentUrl!)} className="w-8 h-8 bg-white/5 rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-400 transition-colors">
-                            <Search size={14} />
-                          </button>
-                        )}
-                      </div>
-                      
-                      {req.reason && (
-                         <div className="bg-white/[0.03] p-2.5 rounded-xl mb-4 border border-white/[0.05]">
-                            <p className="text-[9px] text-slate-500 leading-relaxed italic line-clamp-2">" {req.reason} "</p>
-                         </div>
-                      )}
-
-                      <div className="flex gap-2.5">
-                        <button onClick={()=>handleAction(req.id, LeaveStatus.APPROVED)} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-black py-2.5 rounded-xl text-[9px] uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-blue-600/20">Approve</button>
-                        <button onClick={()=>handleAction(req.id, LeaveStatus.REJECTED)} className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-black py-2.5 rounded-xl text-[9px] uppercase tracking-widest active:scale-95 transition-all">Reject</button>
-                      </div>
-                    </div>
+                {requests.filter(r => r.status === LeaveStatus.PENDING && String(r.staffId) !== String(user?.staffId)).length > 0 ? (
+                  requests.filter(r => r.status === LeaveStatus.PENDING && String(r.staffId) !== String(user?.staffId)).map(req => (
+                    <RequestCard key={req.id} req={req} isManagerView />
                   ))
                 ) : (
                   <div className="py-16 text-center bg-white/5 rounded-[2rem] border border-dashed border-white/10">
@@ -630,8 +654,8 @@ const App: React.FC = () => {
               <h2 className="text-lg font-black text-slate-800 tracking-tight">ประวัติการลาทั้งหมด</h2>
             </header>
             <div className="space-y-3">
-              {requests.filter(r => r.staffId === user?.staffId).length > 0 ? (
-                requests.filter(r => r.staffId === user?.staffId).map(req => (
+              {requests.filter(r => String(r.staffId) === String(user?.staffId)).length > 0 ? (
+                requests.filter(r => String(r.staffId) === String(user?.staffId)).map(req => (
                   <RequestCard key={req.id} req={req} />
                 ))
               ) : (
