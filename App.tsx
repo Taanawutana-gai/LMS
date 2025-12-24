@@ -325,6 +325,14 @@ const App: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    // แจ้งเตือน ห้ามวันสิ้นสุดน้อยกว่าวันเริ่มต้น
+    const s = new Date(newReq.startDate);
+    const e = new Date(newReq.endDate);
+    if (e < s) {
+      alert('ห้ามวันสิ้นสุดน้อยกว่าวันเริ่มต้น');
+      return;
+    }
+
     const days = calculateDays(newReq.startDate, newReq.endDate);
     if (days <= 0) { alert('วันที่ไม่ถูกต้อง'); return; }
     if (!newReq.reason) { alert('กรุณาระบุเหตุผล'); return; }
@@ -355,15 +363,20 @@ const App: React.FC = () => {
   const getSmartSummary = () => {
     if (!newReq.startDate || !newReq.endDate) return null;
 
-    const totalDays = calculateDays(newReq.startDate, newReq.endDate);
+    const s = new Date(newReq.startDate);
+    const e = new Date(newReq.endDate);
+    
+    // ตรวจสอบความถูกต้องของช่วงวันที่
+    const isDateRangeValid = e >= s;
+    const totalDays = isDateRangeValid ? calculateDays(newReq.startDate, newReq.endDate) : 0;
+    
     const balance = balances.find(b => b.type === newReq.type);
     const remain = balance?.remain || 0;
     
     // SLA Checks
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const start = new Date(newReq.startDate);
-    const diffTime = start.getTime() - today.getTime();
+    const diffTime = s.getTime() - today.getTime();
     const advanceDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     let slaRule = 0;
@@ -372,7 +385,7 @@ const App: React.FC = () => {
 
     const isBalanceOk = totalDays <= remain;
     const isSlaOk = advanceDays >= slaRule;
-    const isValid = isBalanceOk && isSlaOk;
+    const isValid = isDateRangeValid && isBalanceOk && isSlaOk;
 
     return {
       totalDays,
@@ -381,6 +394,7 @@ const App: React.FC = () => {
       slaRule,
       isBalanceOk,
       isSlaOk,
+      isDateRangeValid,
       isValid
     };
   };
@@ -577,7 +591,9 @@ const App: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <p className="text-[12px] font-bold text-slate-400 uppercase">จำนวนวันที่ใช้</p>
-                      <p className="text-[14px] font-black text-slate-800">{smartSummary.totalDays} วัน</p>
+                      <p className={`text-[14px] font-black ${smartSummary.isDateRangeValid ? 'text-slate-800' : 'text-rose-600'}`}>
+                        {smartSummary.isDateRangeValid ? `${smartSummary.totalDays} วัน` : 'ระบุไม่ถูกต้อง'}
+                      </p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-[12px] font-bold text-slate-400 uppercase">สิทธิคงเหลือ</p>
@@ -588,6 +604,14 @@ const App: React.FC = () => {
                   </div>
 
                   <div className="pt-2 flex flex-col gap-2">
+                    {/* แจ้งเตือน ห้ามวันสิ้นสุดน้อยกว่าวันเริ่มต้น */}
+                    <div className="flex items-center gap-2">
+                      {smartSummary.isDateRangeValid ? <CheckCircle2 size={14} className="text-emerald-500" /> : <AlertCircle size={14} className="text-rose-500" />}
+                      <span className="text-[14px] font-bold text-slate-600">
+                        {smartSummary.isDateRangeValid ? 'ช่วงวันที่ระบุถูกต้อง' : 'ห้ามวันสิ้นสุดน้อยกว่าวันเริ่มต้น'}
+                      </span>
+                    </div>
+
                     <div className="flex items-center gap-2">
                       {smartSummary.isBalanceOk ? <CheckCircle2 size={14} className="text-emerald-500" /> : <X size={14} className="text-rose-500" />}
                       <span className="text-[14px] font-bold text-slate-600">
