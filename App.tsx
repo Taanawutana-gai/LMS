@@ -1,10 +1,11 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Calendar, Home, PlusCircle, User, ShieldCheck, Clock, X, 
   ChevronLeft, Loader2, RefreshCcw, History, AlertCircle, 
   CheckCircle2, FileText, LogOut, Search, MapPin, Hash, UserCircle,
-  Key, ScanFace, AlertTriangle, CheckSquare
+  Key, ScanFace, AlertTriangle, CheckSquare, Camera, Paperclip, 
+  Image as ImageIcon
 } from 'lucide-react';
 import { 
   UserRole, LeaveType, LeaveStatus, LeaveRequest, LeaveBalance, UserProfile 
@@ -40,9 +41,13 @@ const getLeaveTheme = (type: LeaveType) => {
 
 const formatDate = (dateStr: string): string => {
   if (!dateStr) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return dateStr;
-  return date.toISOString().split('T')[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 const calculateDays = (start: string, end: string): number => {
@@ -107,6 +112,7 @@ const App: React.FC = () => {
   const [lineUserId, setLineUserId] = useState('');
   const [zoomImg, setZoomImg] = useState<string | null>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [newReq, setNewReq] = useState({
     type: LeaveType.ANNUAL, startDate: '', endDate: '', reason: '', attachment: ''
@@ -179,16 +185,33 @@ const App: React.FC = () => {
 
   const getBalance = (type: LeaveType) => balances.find(b => b.type === type)?.remain || 0;
   const daysRequested = calculateDays(newReq.startDate, newReq.endDate);
-  const balanceOk = daysRequested <= getBalance(newReq.type);
+  const currentBalance = getBalance(newReq.type);
+  const balanceOk = daysRequested <= currentBalance;
   const slaDays = SLA_CONFIG[newReq.type] || 0;
   const diffSla = newReq.startDate ? Math.ceil((new Date(newReq.startDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0;
   const slaOk = diffSla >= slaDays;
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewReq({ ...newReq, attachment: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!balanceOk || !slaOk || !newReq.reason) return;
     setLoading(true);
     const res = await SheetService.submitRequest({
-      ...newReq, staffId: user!.staffId, staffName: user!.name, siteId: user!.siteId, totalDays: daysRequested, appliedDate: new Date().toISOString().split('T')[0]
+      ...newReq, 
+      staffId: user!.staffId, 
+      staffName: user!.name, 
+      siteId: user!.siteId, 
+      totalDays: daysRequested, 
+      appliedDate: new Date().toISOString().split('T')[0]
     });
     if (res.success) { 
       alert('ส่งคำขอสำเร็จ'); 
@@ -416,47 +439,133 @@ const App: React.FC = () => {
               </button>
               <h2 className="text-lg font-black text-slate-800">ยื่นใบลา</h2>
             </header>
-            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-50 space-y-5">
-              <div className="space-y-2.5">
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">เลือกประเภท</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {Object.values(LeaveType).map(t => (
-                    <button key={t} onClick={()=>setNewReq({...newReq, type: t})} className={`p-3 rounded-xl border-2 transition-all flex items-center gap-2.5 ${newReq.type === t ? 'border-blue-600 bg-blue-50' : 'border-slate-50 bg-slate-50'}`}>
-                      <div className={`w-2 h-2 rounded-full ${getLeaveTheme(t).color}`} />
-                      <span className={`text-[9px] font-black text-left leading-tight ${newReq.type === t ? 'text-blue-700' : 'text-slate-400'}`}>{getLeaveTheme(t).label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">เริ่ม</label>
-                  <input type="date" value={newReq.startDate} onChange={e=>setNewReq({...newReq, startDate:e.target.value})} className="w-full bg-slate-50 p-3 rounded-xl font-bold border-none ring-1 ring-slate-100 outline-none focus:ring-2 focus:ring-blue-500 text-[11px]" />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">ถึง</label>
-                  <input type="date" value={newReq.endDate} onChange={e=>setNewReq({...newReq, endDate:e.target.value})} className="w-full bg-slate-50 p-3 rounded-xl font-bold border-none ring-1 ring-slate-100 outline-none focus:ring-2 focus:ring-blue-500 text-[11px]" />
-                </div>
-              </div>
-
-              {daysRequested > 0 && (
-                <div className={`p-3 rounded-xl border flex justify-between items-center ${balanceOk && slaOk ? 'bg-blue-50 border-blue-100 text-blue-700' : 'bg-rose-50 border-rose-100 text-rose-700'}`}>
-                  <div className="flex flex-col">
-                    <span className="text-[7px] font-black uppercase tracking-widest opacity-60">สรุปคำขอ</span>
-                    <p className="font-black text-[10px]">ใช้ {daysRequested} วัน (เหลือ {getBalance(newReq.type)})</p>
+            
+            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-50 space-y-6">
+              {/* 2. Leave Type Selection (Dropdown) */}
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+                  <FileText size={10} /> เลือกประเภทการลา
+                </label>
+                <div className="relative">
+                  <select 
+                    value={newReq.type} 
+                    onChange={e => setNewReq({...newReq, type: e.target.value as LeaveType})}
+                    className="w-full bg-slate-50 p-4 rounded-xl font-bold border-none ring-1 ring-slate-100 outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-[13px] text-slate-700"
+                  >
+                    {Object.values(LeaveType).map(t => (
+                      <option key={t} value={t}>
+                        {getLeaveTheme(t).label}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${getLeaveTheme(newReq.type).color}`} />
+                    <ChevronLeft size={16} className="-rotate-90 text-slate-400" />
                   </div>
-                  {(!balanceOk || !slaOk) && <AlertCircle size={14} />}
+                </div>
+              </div>
+
+              {/* 3. Date Selection */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">วันเริ่ม</label>
+                  <div className="relative">
+                    <input 
+                      type="date" 
+                      value={newReq.startDate} 
+                      onChange={e=>setNewReq({...newReq, startDate:e.target.value})} 
+                      className="w-full bg-slate-50 p-4 rounded-xl font-bold border-none ring-1 ring-slate-100 outline-none focus:ring-2 focus:ring-blue-500 text-[11px] text-slate-700" 
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">วันสิ้นสุด</label>
+                  <div className="relative">
+                    <input 
+                      type="date" 
+                      value={newReq.endDate} 
+                      onChange={e=>setNewReq({...newReq, endDate:e.target.value})} 
+                      className="w-full bg-slate-50 p-4 rounded-xl font-bold border-none ring-1 ring-slate-100 outline-none focus:ring-2 focus:ring-blue-500 text-[11px] text-slate-700" 
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. Smart Summary */}
+              {daysRequested > 0 && (
+                <div className={`p-4 rounded-2xl border animate-in zoom-in-95 ${balanceOk && slaOk ? 'bg-blue-50 border-blue-100' : 'bg-rose-50 border-rose-100'}`}>
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <p className={`text-[10px] font-black uppercase tracking-tight ${balanceOk && slaOk ? 'text-blue-600' : 'text-rose-600'}`}>สรุปคำขอลา</p>
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-xl font-black text-slate-800">{daysRequested}</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">วัน</span>
+                      </div>
+                    </div>
+                    <div className="text-right space-y-1">
+                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">สิทธิคงเหลือ</p>
+                      <p className={`text-[11px] font-black ${currentBalance >= daysRequested ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {currentBalance} วัน
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {(!balanceOk || !slaOk) && (
+                    <div className="mt-3 pt-3 border-t border-rose-200/50 flex items-start gap-2 text-rose-600">
+                      <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                      <div className="space-y-0.5">
+                        {!balanceOk && <p className="text-[9px] font-black leading-tight">จำนวนวันลาเกินสิทธิคงเหลือ</p>}
+                        {!slaOk && <p className="text-[9px] font-black leading-tight">ต้องลาล่วงหน้าอย่างน้อย {slaDays} วัน</p>}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">ระบุเหตุผล</label>
-                <textarea value={newReq.reason} onChange={e=>setNewReq({...newReq, reason:e.target.value})} className="w-full bg-slate-50 p-3 rounded-xl font-bold border-none ring-1 ring-slate-100 outline-none focus:ring-2 focus:ring-blue-500 text-xs h-20 resize-none" placeholder="..." />
+              {/* 5. Reason */}
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">ระบุเหตุผลการลา</label>
+                <textarea 
+                  value={newReq.reason} 
+                  onChange={e=>setNewReq({...newReq, reason:e.target.value})} 
+                  className="w-full bg-slate-50 p-4 rounded-xl font-bold border-none ring-1 ring-slate-100 outline-none focus:ring-2 focus:ring-blue-500 text-xs h-24 resize-none placeholder:text-slate-300" 
+                  placeholder="ตัวอย่าง: ไปทำธุระที่ต่างจังหวัด..." 
+                />
               </div>
 
-              <button onClick={handleSubmit} disabled={!balanceOk || !slaOk || !newReq.reason || loading} className="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-100 disabled:opacity-30 active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-[0.2em] text-[10px]">
-                {loading ? <Loader2 className="animate-spin" size={16} /> : <><CheckCircle2 size={16} /> ส่งใบลา</>}
+              {/* 6. Document Upload */}
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">แนบเอกสาร (ถ้ามี)</label>
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full h-32 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-slate-100 transition-all overflow-hidden relative group"
+                >
+                  <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*" capture="environment" />
+                  {newReq.attachment ? (
+                    <>
+                      <img src={newReq.attachment} className="w-full h-full object-cover" alt="Preview" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Camera className="text-white" size={24} />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-slate-400">
+                        <Camera size={20} />
+                      </div>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">ถ่ายรูปหรือเลือกไฟล์</p>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* 7. Submit Button */}
+              <button 
+                onClick={handleSubmit} 
+                disabled={!balanceOk || !slaOk || !newReq.reason || loading} 
+                className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-600/20 disabled:opacity-30 disabled:shadow-none active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-[0.2em] text-[11px]"
+              >
+                {loading ? <Loader2 className="animate-spin" size={18} /> : <><CheckCircle2 size={18} /> ส่งใบลา</>}
               </button>
             </div>
           </div>
