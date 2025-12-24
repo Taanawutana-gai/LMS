@@ -1,7 +1,7 @@
 
 /**
  * Leave Management System - Backend Script
- * Required Scopes (will prompt for authorization on first run/deploy):
+ * Required Scopes:
  * - https://www.googleapis.com/auth/spreadsheets
  * - https://www.googleapis.com/auth/drive
  */
@@ -9,8 +9,24 @@
 const TARGET_SHEET_ID = "1q9elvW0_-OkAi8vBwHg38579Z1ozCgeEC27fnLaYBtk";
 const ATTACHMENT_FOLDER_ID = "1Or-p8MwFH35PbROikrvjDS3yQ-V6IOGr";
 
+/**
+ * ฟังก์ชันสำหรับบังคับให้ระบบแสดงหน้าต่างขอสิทธิ์เข้าถึง Drive
+ * วิธีใช้: เลือกฟังก์ชันนี้ในเมนูด้านบนแล้วกด "เรียกใช้" (Run)
+ */
+function forceAuth() {
+  try {
+    const folder = DriveApp.getFolderById(ATTACHMENT_FOLDER_ID);
+    Logger.log("เข้าถึงโฟลเดอร์สำเร็จ: " + folder.getName());
+    const ss = SpreadsheetApp.openById(TARGET_SHEET_ID);
+    Logger.log("เข้าถึงชีตสำเร็จ: " + ss.getName());
+    Browser.msgBox("ยืนยันสิทธิ์สำเร็จแล้ว! กรุณาทำการ Deploy เวอร์ชันใหม่ (New Version) อีกครั้ง");
+  } catch (e) {
+    Logger.log("เกิดข้อผิดพลาด: " + e.toString());
+    throw e;
+  }
+}
+
 function doGet(e) {
-  // Test if the script is accessible
   if (!e || !e.parameter || !e.parameter.action) {
     return ContentService.createTextOutput("LMS Backend is running. Please use via Web App.").setMimeType(ContentService.MimeType.TEXT);
   }
@@ -71,11 +87,10 @@ function doGet(e) {
 }
 
 function doPost(e) {
-  // SAFETY CHECK: Prevent error when running manually from Script Editor
   if (!e || !e.postData || !e.postData.contents) {
     return jsonResponse({ 
       success: false, 
-      message: "Warning: Script was run manually. Please test by submitting a leave request from the actual web application." 
+      message: "Warning: Script was run manually. Please test by submitting a request from the web app." 
     });
   }
 
@@ -92,7 +107,6 @@ function doPost(e) {
     const sheet = ss.getSheetByName('Leave_Requests');
     const id = 'REQ-' + Math.random().toString(36).substr(2, 9).toUpperCase();
     
-    // Handle Attachment Upload to Google Drive Folder provided by user
     let fileUrl = "";
     if (body.attachment && body.attachment.includes("base64,")) {
       try {
@@ -101,19 +115,15 @@ function doPost(e) {
         const mimeType = parts[0].match(/:(.*?);/)[1];
         const base64Data = parts[1];
         
-        // Sanitize file name
         const cleanStaffId = (body.staffId || "unknown").replace(/[^a-zA-Z0-9]/g, '_');
-        const fileName = `${id}_${cleanStaffId}_attachment`;
+        const fileName = `${id}_${cleanStaffId}`;
         
         const blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType, fileName);
         const file = folder.createFile(blob);
-        
-        // Ensure anyone with link can view the file
         file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
         fileUrl = file.getUrl();
       } catch (err) {
         fileUrl = "Error saving attachment: " + err.toString();
-        console.error("Attachment Error: " + err.toString());
       }
     }
 
