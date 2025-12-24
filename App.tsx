@@ -5,7 +5,7 @@ import {
   ChevronLeft, Loader2, RefreshCcw, History, AlertCircle, 
   CheckCircle2, FileText, LogOut, Search, MapPin, Hash, UserCircle,
   Key, ScanFace, AlertTriangle, CheckSquare, Camera, Paperclip, 
-  Image as ImageIcon
+  Image as ImageIcon, Trash2, RotateCcw
 } from 'lucide-react';
 import { 
   UserRole, LeaveType, LeaveStatus, LeaveRequest, LeaveBalance, UserProfile 
@@ -229,6 +229,76 @@ const App: React.FC = () => {
     setLoading(false);
   };
 
+  const handleCancelRequest = async (id: string) => {
+    if (window.confirm('คุณต้องการยกเลิกคำขอลาใช่หรือไม่?')) {
+      handleAction(id, LeaveStatus.CANCELLED);
+    }
+  };
+
+  const handleResubmit = (req: LeaveRequest) => {
+    setNewReq({
+      type: req.type,
+      startDate: formatDate(req.startDate),
+      endDate: formatDate(req.endDate),
+      reason: req.reason,
+      attachment: req.attachmentUrl || ''
+    });
+    setView('new');
+  };
+
+  const RequestCard = ({ req }: { req: LeaveRequest }) => {
+    const theme = getLeaveTheme(req.type);
+    return (
+      <div key={req.id} className="bg-white p-4 rounded-2xl border border-slate-50 shadow-sm space-y-3 transition-all hover:bg-slate-50/50">
+        <div className="flex justify-between items-start">
+          <div className="flex items-center gap-3">
+            <div className={`w-1.5 h-1.5 rounded-full ${theme.color}`} />
+            <div>
+              <h5 className="font-black text-[11px] text-slate-800 leading-tight">{theme.label}</h5>
+              <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">
+                {formatDate(req.startDate)} <span className="mx-0.5 text-slate-200">|</span> {formatDate(req.endDate)}
+              </p>
+            </div>
+          </div>
+          <StatusBadge status={req.status} />
+        </div>
+        
+        <div className="flex justify-between items-center text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+           <span className="bg-slate-50 px-2 py-0.5 rounded-md font-black">{req.totalDays} วัน</span>
+           {req.approver && <span className="text-slate-300">Approver: {req.approver}</span>}
+        </div>
+
+        {req.status === LeaveStatus.REJECTED && req.approverReason && (
+          <div className="bg-rose-50/50 p-2 rounded-lg border border-rose-100">
+             <p className="text-[8px] font-black text-rose-600 uppercase mb-0.5">Reason for rejection:</p>
+             <p className="text-[9px] text-rose-500 leading-tight italic">"{req.approverReason}"</p>
+          </div>
+        )}
+
+        <div className="pt-2 border-t border-slate-50 flex gap-2">
+           {req.status === LeaveStatus.PENDING && (
+              <button 
+                onClick={() => handleCancelRequest(req.id)}
+                className="flex items-center gap-1.5 text-slate-400 hover:text-rose-500 transition-colors py-1 px-2 rounded-md hover:bg-rose-50"
+              >
+                <Trash2 size={12} />
+                <span className="text-[9px] font-black uppercase tracking-widest">ยกเลิก</span>
+              </button>
+           )}
+           {req.status === LeaveStatus.REJECTED && (
+              <button 
+                onClick={() => handleResubmit(req)}
+                className="flex-1 flex items-center justify-center gap-1.5 bg-blue-600 text-white py-2 rounded-xl active:scale-95 transition-all shadow-md shadow-blue-100"
+              >
+                <RotateCcw size={14} />
+                <span className="text-[10px] font-black uppercase tracking-widest">ยื่นใหม่</span>
+              </button>
+           )}
+        </div>
+      </div>
+    );
+  };
+
   const isEligibleManager = user?.roleType === UserRole.SUPERVISOR || user?.roleType === UserRole.HR;
 
   if (!isLoggedIn) return (
@@ -291,7 +361,6 @@ const App: React.FC = () => {
       <main className="flex-1 p-5 overflow-y-auto">
         {view === 'dashboard' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* 1. Profile Section */}
             <section className="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-50 relative overflow-hidden">
               <div className="flex items-start justify-between relative z-10">
                 <div className="flex items-center gap-3">
@@ -319,7 +388,6 @@ const App: React.FC = () => {
               </div>
             </section>
 
-            {/* 2. Leave Balance Section */}
             <section className="space-y-4">
               <div className="flex items-center gap-2 px-1">
                 <div className="w-1 h-3 bg-blue-500 rounded-full" />
@@ -332,7 +400,6 @@ const App: React.FC = () => {
               </div>
             </section>
 
-            {/* 3. Recent History (3 items) */}
             <section className="space-y-4">
               <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2">
@@ -344,18 +411,7 @@ const App: React.FC = () => {
               <div className="space-y-2">
                 {requests.filter(r => r.staffId === user?.staffId).length > 0 ? (
                   requests.filter(r => r.staffId === user?.staffId).slice(0, 3).map(req => (
-                    <div key={req.id} className="bg-white p-3.5 rounded-2xl border border-slate-50 shadow-sm flex items-center justify-between transition-all hover:bg-slate-50/50">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-1.5 h-1.5 rounded-full ${getLeaveTheme(req.type).color}`} />
-                        <div>
-                          <h5 className="font-black text-[11px] text-slate-800 leading-tight">{getLeaveTheme(req.type).label}</h5>
-                          <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">
-                            {formatDate(req.startDate)} <span className="mx-0.5 text-slate-200">|</span> {formatDate(req.endDate)}
-                          </p>
-                        </div>
-                      </div>
-                      <StatusBadge status={req.status} />
-                    </div>
+                    <RequestCard key={req.id} req={req} />
                   ))
                 ) : (
                   <div className="bg-white p-8 rounded-[2rem] border border-dashed border-slate-100 text-center">
@@ -441,7 +497,6 @@ const App: React.FC = () => {
             </header>
             
             <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-50 space-y-6">
-              {/* 2. Leave Type Selection (Dropdown) */}
               <div className="space-y-2">
                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
                   <FileText size={10} /> เลือกประเภทการลา
@@ -465,7 +520,6 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* 3. Date Selection */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">วันเริ่ม</label>
@@ -491,7 +545,6 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* 4. Smart Summary */}
               {daysRequested > 0 && (
                 <div className={`p-4 rounded-2xl border animate-in zoom-in-95 ${balanceOk && slaOk ? 'bg-blue-50 border-blue-100' : 'bg-rose-50 border-rose-100'}`}>
                   <div className="flex justify-between items-start">
@@ -522,7 +575,6 @@ const App: React.FC = () => {
                 </div>
               )}
 
-              {/* 5. Reason */}
               <div className="space-y-2">
                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">ระบุเหตุผลการลา</label>
                 <textarea 
@@ -533,7 +585,6 @@ const App: React.FC = () => {
                 />
               </div>
 
-              {/* 6. Document Upload */}
               <div className="space-y-2">
                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">แนบเอกสาร (ถ้ามี)</label>
                 <div 
@@ -559,7 +610,6 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* 7. Submit Button */}
               <button 
                 onClick={handleSubmit} 
                 disabled={!balanceOk || !slaOk || !newReq.reason || loading} 
@@ -579,22 +629,10 @@ const App: React.FC = () => {
               </button>
               <h2 className="text-lg font-black text-slate-800 tracking-tight">ประวัติการลาทั้งหมด</h2>
             </header>
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               {requests.filter(r => r.staffId === user?.staffId).length > 0 ? (
                 requests.filter(r => r.staffId === user?.staffId).map(req => (
-                  <div key={req.id} className="bg-white p-4 rounded-2xl border border-slate-50 shadow-sm space-y-2">
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-2">
-                         <div className={`w-1.5 h-1.5 rounded-full ${getLeaveTheme(req.type).color}`} />
-                         <h4 className="font-black text-[11px]">{getLeaveTheme(req.type).label}</h4>
-                      </div>
-                      <StatusBadge status={req.status} />
-                    </div>
-                    <div className="flex justify-between items-center text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                       <span>{formatDate(req.startDate)} - {formatDate(req.endDate)}</span>
-                       <span className="bg-slate-50 px-2 py-0.5 rounded-md font-black">{req.totalDays} วัน</span>
-                    </div>
-                  </div>
+                  <RequestCard key={req.id} req={req} />
                 ))
               ) : (
                 <div className="py-20 text-center text-slate-300 font-black uppercase text-[10px] tracking-widest">
