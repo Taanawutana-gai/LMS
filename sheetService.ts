@@ -69,8 +69,10 @@ export const SheetService = {
 
   async getRequests(staffId?: string, isManager?: boolean): Promise<LeaveRequest[]> {
     try {
-      const query = isManager ? `action=getAllRequests` : `action=getRequests&staffId=${staffId}`;
-      const response = await fetch(`${SCRIPT_URL}?${query}&sheetId=${SHEET_ID}`);
+      // Ensure staffId is sent even for managers for logging/tracking purposes
+      const actionParam = isManager ? 'action=getAllRequests' : 'action=getRequests';
+      const staffIdParam = staffId ? `&staffId=${staffId}` : '';
+      const response = await fetch(`${SCRIPT_URL}?${actionParam}${staffIdParam}&sheetId=${SHEET_ID}`);
       const data = await response.json();
       return data.success ? data.requests : [];
     } catch (error) {
