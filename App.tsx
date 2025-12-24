@@ -224,7 +224,6 @@ const App: React.FC = () => {
     type: LeaveType.ANNUAL, startDate: '', endDate: '', reason: '', attachment: ''
   });
 
-  // Flexible Role Detection
   const checkIsManager = (role?: string) => {
     if (!role) return false;
     const r = role.toLowerCase().trim();
@@ -353,18 +352,14 @@ const App: React.FC = () => {
   const myStaffId = String(user?.staffId || '').trim().toLowerCase();
   const mySiteId = String(user?.siteId || '').trim().toLowerCase();
   
-  // Refined Logic for My Personal Requests
   const myRequests = requests.filter(r => 
     String(r.staffId || '').trim().toLowerCase() === myStaffId
   );
   
-  // Team Filtering Logic: Pending requests from SAME SITE, excluding self
   const teamPending = requests.filter(r => {
     const rStatus = String(r.status || '').toLowerCase().trim();
     const rStaffId = String(r.staffId || '').trim().toLowerCase();
     const rSiteId = String(r.siteId || '').trim().toLowerCase();
-    
-    // Core check: is Pending AND not me AND same site
     return rStatus === 'pending' && rStaffId !== myStaffId && rSiteId === mySiteId;
   });
 
@@ -376,23 +371,49 @@ const App: React.FC = () => {
             {linePicture ? <img src={linePicture} className="w-full h-full object-cover" /> : <UserCircle size={64} className="text-slate-200" />}
           </div>
           <div>
-            <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">Leave Workflow</p>
+            <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">Leave Workflow Online</p>
             <h2 className="text-xl font-black text-slate-800 tracking-tight">{lineName || 'LINE User'}</h2>
           </div>
+          
           <div className="w-full space-y-4 text-left">
             <div className="space-y-1.5">
-               <label className="text-[9px] font-black text-slate-400 uppercase ml-1">LINE UID</label>
-               <input value={userIdInput} readOnly className="w-full bg-slate-50/80 text-slate-400 px-4 py-4 rounded-2xl font-bold text-[10px] ring-1 ring-slate-100 outline-none truncate" />
+               <label className="text-[9px] font-black text-slate-400 uppercase ml-1">LINE UID (Your identity)</label>
+               <div className="flex items-center gap-2 w-full bg-slate-50/80 text-slate-400 px-4 py-3 rounded-2xl font-bold text-[9px] ring-1 ring-slate-100/50">
+                  <Key size={12} className="text-blue-400" />
+                  <span className="truncate">{userIdInput}</span>
+               </div>
             </div>
+            
             <div className="space-y-1.5">
                <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Staff ID</label>
-               <input value={staffIdInput} onChange={e => setStaffIdInput(e.target.value)} className="w-full bg-white px-4 py-4 rounded-2xl font-bold ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm transition-all" placeholder="ป้อนรหัสพนักงาน (เช่น 2624)" />
+               <div className="relative">
+                 <Hash size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                 <input 
+                  value={staffIdInput} 
+                  onChange={e => setStaffIdInput(e.target.value)} 
+                  className="w-full bg-white pl-10 pr-4 py-4 rounded-2xl font-bold ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm transition-all" 
+                  placeholder="ป้อนรหัสพนักงาน (เช่น 2624)" 
+                 />
+               </div>
             </div>
-            {loginError && <p className="text-[10px] font-bold text-rose-600 text-center animate-pulse">{loginError}</p>}
-            <button onClick={handleLogin} disabled={loading} className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs disabled:opacity-50">
-              {loading ? <Loader2 className="animate-spin" /> : 'LOGIN TO SYSTEM'}
+
+            {loginError && (
+              <div className="flex items-center gap-2 justify-center bg-rose-50 p-2 rounded-xl">
+                <AlertCircle size={12} className="text-rose-500" />
+                <p className="text-[9px] font-bold text-rose-600">{loginError}</p>
+              </div>
+            )}
+
+            <button 
+              onClick={handleLogin} 
+              disabled={loading} 
+              className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs disabled:opacity-50"
+            >
+              {loading ? <Loader2 className="animate-spin" /> : <><ScanFace size={16} /> Login to System</>}
             </button>
           </div>
+          
+          <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Powered by LMS Backend</p>
         </div>
       </div>
     </div>
@@ -465,7 +486,7 @@ const App: React.FC = () => {
               <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-xl"><ShieldCheck size={20} /></div>
               <div>
                 <h2 className="text-lg font-black text-slate-800 tracking-tight leading-none">รายการรออนุมัติ</h2>
-                <p className="text-[8px] font-black text-blue-500 uppercase tracking-widest mt-1">Site: {user?.siteId}</p>
+                <p className="text-[8px] font-black text-blue-500 uppercase tracking-widest mt-1">Site Scope: {user?.siteId}</p>
               </div>
             </header>
             <section className="bg-slate-900 p-6 rounded-[2.5rem] shadow-2xl text-white space-y-6 min-h-[450px] relative border border-white/5">
@@ -483,9 +504,8 @@ const App: React.FC = () => {
                     <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center text-slate-500"><CheckCircle2 size={24} /></div>
                     <div className="space-y-1">
                       <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">ไม่มีรายการค้างพิจารณา</p>
-                      <p className="text-[7px] text-slate-500 font-bold uppercase tracking-tighter italic">ใน Site {user?.siteId} ของคุณ</p>
+                      <p className="text-[7px] text-slate-500 font-bold uppercase tracking-tighter italic">ในสาขา {user?.siteId} ของคุณ</p>
                     </div>
-                    <button onClick={() => fetchData(user!)} className="mt-2 flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-[8px] font-black text-blue-400 uppercase tracking-widest transition-all"><RefreshCcw size={10} /> รีเฟรชข้อมูล</button>
                   </div>
                 )}
               </div>
