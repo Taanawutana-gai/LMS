@@ -73,9 +73,9 @@ const RequestCard: React.FC<{
   const isPending = currentStatus === 'pending';
   const isRejected = currentStatus === 'rejected';
 
-  // ปรับขนาดฟอนต์ตามมุมมอง - ปรับให้หน้า Approval (ManagerView) ใหญ่ขึ้น
-  const labelSize = isDashboardView ? 'text-[16px]' : (isHistoryView || isManagerView ? 'text-[18px]' : 'text-[11px]');
-  const detailSize = isDashboardView ? 'text-[13px]' : (isHistoryView || isManagerView ? 'text-[14px]' : 'text-[9px]');
+  // ปรับขนาดฟอนต์ตามมุมมอง - หน้า Approval (ManagerView) ต้องไม่เกิน 14px
+  const labelSize = isDashboardView ? 'text-[16px]' : (isManagerView ? 'text-[14px]' : (isHistoryView ? 'text-[18px]' : 'text-[11px]'));
+  const detailSize = isDashboardView ? 'text-[13px]' : (isManagerView ? 'text-[14px]' : (isHistoryView ? 'text-[14px]' : 'text-[9px]'));
   const subLabelSize = isManagerView ? 'text-[14px]' : 'text-[9px]';
   const siteTagSize = isManagerView ? 'text-[11px]' : 'text-[7px]';
 
@@ -465,10 +465,7 @@ const App: React.FC = () => {
           <div className="space-y-6 animate-in slide-in-from-right-10 duration-500">
              <header className="flex items-center gap-3">
               <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-xl"><ShieldCheck size={24} /></div>
-              <div>
-                <h2 className="text-[20px] font-black text-slate-800 tracking-tight leading-none">รายการรออนุมัติ</h2>
-                <p className="text-[11px] font-black text-blue-500 uppercase tracking-widest mt-1">Site Scope: {user?.siteId}</p>
-              </div>
+              {/* Removed "รายการรออนุมัติ" and "Site Scope" */}
             </header>
             <section className="bg-slate-900 p-6 rounded-[2.5rem] shadow-2xl text-white space-y-6 min-h-[450px] border border-white/5">
               <div className="flex items-center justify-between">
@@ -483,7 +480,7 @@ const App: React.FC = () => {
                 ) : (
                   <div className="py-24 text-center border border-dashed border-white/10 rounded-3xl flex flex-col items-center gap-4">
                     <CheckCircle2 size={32} className="text-slate-500" />
-                    <p className="text-[16px] font-black text-slate-300 uppercase tracking-widest">ไม่มีรายการค้างพิจารณา</p>
+                    <p className="text-[14px] font-black text-slate-300 uppercase tracking-widest">ไม่มีรายการค้างพิจารณา</p>
                   </div>
                 )}
               </div>
