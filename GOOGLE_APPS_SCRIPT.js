@@ -1,9 +1,20 @@
 
+/**
+ * Leave Management System - Backend Script
+ * Required Scopes (will prompt for authorization on first run/deploy):
+ * - https://www.googleapis.com/auth/spreadsheets
+ * - https://www.googleapis.com/auth/drive
+ */
+
 const TARGET_SHEET_ID = "1q9elvW0_-OkAi8vBwHg38579Z1ozCgeEC27fnLaYBtk";
 const ATTACHMENT_FOLDER_ID = "1Or-p8MwFH35PbROikrvjDS3yQ-V6IOGr";
 
 function doGet(e) {
-  e = e || { parameter: { action: "testConnection", sheetId: TARGET_SHEET_ID } };
+  // Test if the script is accessible
+  if (!e || !e.parameter || !e.parameter.action) {
+    return ContentService.createTextOutput("LMS Backend is running. Please use via Web App.").setMimeType(ContentService.MimeType.TEXT);
+  }
+
   const action = e.parameter.action;
   const staffId = e.parameter.staffId;
   const lineUserId = e.parameter.lineUserId;
@@ -60,7 +71,21 @@ function doGet(e) {
 }
 
 function doPost(e) {
-  const body = JSON.parse(e.postData.contents);
+  // SAFETY CHECK: Prevent error when running manually from Script Editor
+  if (!e || !e.postData || !e.postData.contents) {
+    return jsonResponse({ 
+      success: false, 
+      message: "Warning: Script was run manually. Please test by submitting a leave request from the actual web application." 
+    });
+  }
+
+  let body;
+  try {
+    body = JSON.parse(e.postData.contents);
+  } catch (err) {
+    return jsonResponse({ success: false, message: "Invalid JSON format" });
+  }
+
   const ss = SpreadsheetApp.openById(body.sheetId || TARGET_SHEET_ID);
   
   if (body.action === 'addRequest') {
@@ -72,17 +97,23 @@ function doPost(e) {
     if (body.attachment && body.attachment.includes("base64,")) {
       try {
         const folder = DriveApp.getFolderById(ATTACHMENT_FOLDER_ID);
-        
         const parts = body.attachment.split(",");
         const mimeType = parts[0].match(/:(.*?);/)[1];
         const base64Data = parts[1];
-        const fileName = id + "_" + body.staffId + "_attachment";
+        
+        // Sanitize file name
+        const cleanStaffId = (body.staffId || "unknown").replace(/[^a-zA-Z0-9]/g, '_');
+        const fileName = `${id}_${cleanStaffId}_attachment`;
+        
         const blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType, fileName);
         const file = folder.createFile(blob);
+        
+        // Ensure anyone with link can view the file
         file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
         fileUrl = file.getUrl();
       } catch (err) {
         fileUrl = "Error saving attachment: " + err.toString();
+        console.error("Attachment Error: " + err.toString());
       }
     }
 
