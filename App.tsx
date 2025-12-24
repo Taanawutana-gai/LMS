@@ -325,7 +325,6 @@ const App: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    // แจ้งเตือน ห้ามวันสิ้นสุดน้อยกว่าวันเริ่มต้น
     const s = new Date(newReq.startDate);
     const e = new Date(newReq.endDate);
     if (e < s) {
@@ -337,7 +336,6 @@ const App: React.FC = () => {
     if (days <= 0) { alert('วันที่ไม่ถูกต้อง'); return; }
     if (!newReq.reason) { alert('กรุณาระบุเหตุผล'); return; }
     
-    // Final check for summary validity
     const summary = getSmartSummary();
     if (summary && !summary.isValid) {
       alert('ข้อมูลการลายังไม่เป็นไปตามเงื่อนไข กรุณาตรวจสอบสิทธิคงเหลือหรือกำหนดการลาล่วงหน้า');
@@ -359,21 +357,18 @@ const App: React.FC = () => {
     setLoading(false);
   };
 
-  // --- Smart Summary Logic ---
   const getSmartSummary = () => {
     if (!newReq.startDate || !newReq.endDate) return null;
 
     const s = new Date(newReq.startDate);
     const e = new Date(newReq.endDate);
     
-    // ตรวจสอบความถูกต้องของช่วงวันที่
     const isDateRangeValid = e >= s;
     const totalDays = isDateRangeValid ? calculateDays(newReq.startDate, newReq.endDate) : 0;
     
     const balance = balances.find(b => b.type === newReq.type);
     const remain = balance?.remain || 0;
     
-    // SLA Checks
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const diffTime = s.getTime() - today.getTime();
@@ -575,7 +570,6 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* Smart Summary - Online Check */}
               {smartSummary && (
                 <div className={`p-4 rounded-2xl border-2 animate-in fade-in slide-in-from-top-2 duration-500 space-y-3 ${smartSummary.isValid ? 'bg-blue-50/50 border-blue-100' : 'bg-rose-50 border-rose-200'}`}>
                   <div className="flex items-center justify-between border-b pb-2 border-slate-100">
@@ -604,7 +598,6 @@ const App: React.FC = () => {
                   </div>
 
                   <div className="pt-2 flex flex-col gap-2">
-                    {/* แจ้งเตือน ห้ามวันสิ้นสุดน้อยกว่าวันเริ่มต้น */}
                     <div className="flex items-center gap-2">
                       {smartSummary.isDateRangeValid ? <CheckCircle2 size={14} className="text-emerald-500" /> : <AlertCircle size={14} className="text-rose-500" />}
                       <span className="text-[14px] font-bold text-slate-600">
@@ -664,7 +657,9 @@ const App: React.FC = () => {
               <div className="flex justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-50"><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Employee ID</span><span className="font-black text-slate-700">{user?.staffId}</span></div>
               <div className="flex justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-50"><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Office Site</span><span className="font-black text-slate-700 uppercase">{user?.siteId}</span></div>
             </div>
-            <button onClick={() => setIsLoggedIn(false)} className="w-full mt-10 bg-rose-50 text-rose-500 font-black py-4.5 rounded-2xl flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest hover:bg-rose-100 transition-all"><LogOut size={16} /> Logout System</button>
+            <button onClick={() => setIsLoggedIn(false)} className="w-full mt-10 bg-rose-50 text-rose-500 font-black py-4 rounded-2xl flex items-center justify-center gap-2 uppercase text-xs tracking-widest shadow-xl shadow-rose-100/50 active:scale-95 hover:bg-rose-100 transition-all">
+              <LogOut size={16} /> Logout System
+            </button>
           </div>
         )}
       </main>
