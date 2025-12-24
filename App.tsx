@@ -657,8 +657,8 @@ const App: React.FC = () => {
               <div className="flex justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-50"><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Employee ID</span><span className="font-black text-slate-700">{user?.staffId}</span></div>
               <div className="flex justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-50"><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Office Site</span><span className="font-black text-slate-700 uppercase">{user?.siteId}</span></div>
             </div>
-            <button onClick={() => setIsLoggedIn(false)} className="w-full mt-10 bg-rose-50 text-rose-500 font-black py-4 rounded-2xl flex items-center justify-center gap-2 uppercase text-xs tracking-widest shadow-xl shadow-rose-100/50 active:scale-95 hover:bg-rose-100 transition-all">
-              <LogOut size={16} /> Logout System
+            <button onClick={() => setIsLoggedIn(false)} className="w-full mt-8 bg-rose-50 text-rose-500 font-black py-3 rounded-2xl flex items-center justify-center gap-2 uppercase text-[11px] tracking-widest shadow-md shadow-rose-100/50 active:scale-95 hover:bg-rose-100 transition-all">
+              <LogOut size={14} /> Logout System
             </button>
           </div>
         )}
