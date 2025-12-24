@@ -13,17 +13,6 @@ import { SheetService } from './sheetService.ts';
 
 const LIFF_ID = '2007509057-esMqbZzO';
 
-const SLA_CONFIG: Record<string, number> = {
-  [LeaveType.ANNUAL]: 5,
-  [LeaveType.PERSONAL]: 5,
-  [LeaveType.OTHER]: 5,
-  [LeaveType.SICK]: 0,
-  [LeaveType.MATERNITY]: 0,
-  [LeaveType.PUBLIC_HOLIDAY]: 0,
-  [LeaveType.WEEKLY_HOLIDAY_SWITCH]: 0,
-  [LeaveType.LEAVE_WITHOUT_PAY]: 0,
-};
-
 const getLeaveTheme = (type: LeaveType) => {
   switch (type) {
     case LeaveType.SICK: return { color: 'bg-rose-500', bg: 'bg-rose-50', text: 'text-rose-600', border: 'border-rose-100', label: 'ลาป่วย' };
@@ -79,8 +68,8 @@ const RequestCard: React.FC<{
   const [rejectReason, setRejectReason] = useState('');
   
   const theme = getLeaveTheme(req.type);
-  const isOwner = String(req.staffId).trim().toLowerCase() === String(user?.staffId).trim().toLowerCase();
-  const currentStatus = String(req.status).toLowerCase().trim();
+  const isOwner = String(req.staffId || '').trim().toLowerCase() === String(user?.staffId || '').trim().toLowerCase();
+  const currentStatus = String(req.status || 'Pending').toLowerCase().trim();
   const isPending = currentStatus === 'pending';
   const isRejected = currentStatus === 'rejected';
 
@@ -230,23 +219,33 @@ const App: React.FC = () => {
     type: LeaveType.ANNUAL, startDate: '', endDate: '', reason: '', attachment: ''
   });
 
+  // Role Checker - More flexible for Staff ID 2624 and others
   const checkIsManager = (role?: string) => {
     if (!role) return false;
     const r = role.toLowerCase().trim();
-    return r === 'supervisor' || r === 'hr' || r === 'manager' || r === 'admin';
+    // Inclusive matching for common manager roles
+    return r.includes('supervisor') || 
+           r.includes('hr') || 
+           r.includes('manager') || 
+           r.includes('lead') || 
+           r.includes('admin') || 
+           r.includes('head');
   };
 
   const fetchData = async (p: UserProfile) => {
     setLoading(true);
     try {
       const isManagerRole = checkIsManager(p.roleType);
+      // Pass isManagerRole to get all requests if user is a manager
       const [b, r] = await Promise.all([
         SheetService.getBalances(p.staffId),
-        SheetService.getRequests(p.staffId, isManagerRole) // Manager role triggers action=getAllRequests
+        SheetService.getRequests(p.staffId, isManagerRole)
       ]);
       if (b) setBalances(b.balances);
       setRequests(r || []);
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+      console.error('FetchData Error:', e); 
+    }
     setLoading(false);
   };
 
@@ -272,20 +271,25 @@ const App: React.FC = () => {
 
   const handleLogin = async () => {
     setLoginError(null);
-    if (!staffIdInput.trim()) { setLoginError('กรุณากรอกรหัสพนักงาน'); return; }
+    const sid = staffIdInput.trim();
+    if (!sid) { setLoginError('กรุณากรอกรหัสพนักงาน'); return; }
     setLoading(true);
     try {
-      const p = await SheetService.getProfile(staffIdInput.trim());
+      const p = await SheetService.getProfile(sid);
       if (!p) {
         setLoginError('ไม่พบรหัสพนักงานนี้ในระบบ');
         setLoading(false);
         return;
       }
-      await SheetService.linkLineId(staffIdInput.trim(), userIdInput);
-      setUser({ ...p, lineUserId: userIdInput });
-      fetchData(p);
+      await SheetService.linkLineId(sid, userIdInput);
+      const updatedUser = { ...p, lineUserId: userIdInput };
+      setUser(updatedUser);
+      fetchData(updatedUser);
       setIsLoggedIn(true);
-    } catch (e) { setLoginError('เกิดข้อผิดพลาดในการเชื่อมต่อ'); }
+    } catch (e) { 
+      console.error('Login Error:', e);
+      setLoginError('เกิดข้อผิดพลาดในการเชื่อมต่อ'); 
+    }
     setLoading(false);
   };
 
@@ -302,6 +306,7 @@ const App: React.FC = () => {
     setLoading(true);
     const success = await SheetService.updateRequestStatus(id, status, user?.name, reason);
     if (success) { await fetchData(user!); }
+    else { alert('เกิดข้อผิดพลาดในการดำเนินการ'); }
     setLoading(false);
   };
 
@@ -318,32 +323,41 @@ const App: React.FC = () => {
 
   const handleSubmit = async () => {
     const days = calculateDays(newReq.startDate, newReq.endDate);
-    if (days <= 0 || !newReq.reason) return;
+    if (days <= 0) { alert('วันที่ไม่ถูกต้อง'); return; }
+    if (!newReq.reason) { alert('กรุณาระบุเหตุผล'); return; }
+    
     setLoading(true);
-    const res = await SheetService.submitRequest({
-      ...newReq, 
-      staffId: user!.staffId, 
-      staffName: user!.name, 
-      siteId: user!.siteId, 
-      totalDays: days, 
-      appliedDate: new Date().toISOString().split('T')[0]
-    });
-    if (res.success) { 
-      await fetchData(user!); 
-      setView('dashboard'); 
-      setNewReq({type: LeaveType.ANNUAL, startDate: '', endDate: '', reason: '', attachment: ''}); 
-    }
+    try {
+      const res = await SheetService.submitRequest({
+        ...newReq, 
+        staffId: user!.staffId, 
+        staffName: user!.name, 
+        siteId: user!.siteId, 
+        totalDays: days, 
+        appliedDate: new Date().toISOString().split('T')[0]
+      });
+      if (res.success) { 
+        alert('ส่งใบลาสำเร็จ');
+        await fetchData(user!); 
+        setView('dashboard'); 
+        setNewReq({type: LeaveType.ANNUAL, startDate: '', endDate: '', reason: '', attachment: ''}); 
+      }
+    } catch (e) { alert('เกิดข้อผิดพลาดในการส่งข้อมูล'); }
     setLoading(false);
   };
 
   const isEligibleManager = checkIsManager(user?.roleType);
   const myStaffId = String(user?.staffId || '').trim().toLowerCase();
   
-  // Filtering Logic
-  const myRequests = requests.filter(r => String(r.staffId).trim().toLowerCase() === myStaffId);
+  // Refined Filtering Logic to handle Team Pending items
+  const myRequests = requests.filter(r => 
+    String(r.staffId || '').trim().toLowerCase() === myStaffId
+  );
+  
   const teamPending = requests.filter(r => {
-    const status = String(r.status).toLowerCase().trim();
-    const staffId = String(r.staffId).trim().toLowerCase();
+    const status = String(r.status || '').toLowerCase().trim();
+    const staffId = String(r.staffId || '').trim().toLowerCase();
+    // Must be Pending and NOT belong to the manager
     return status === 'pending' && staffId !== myStaffId;
   });
 
@@ -360,7 +374,7 @@ const App: React.FC = () => {
           </div>
           <div className="w-full space-y-4 text-left">
             <input value={userIdInput} readOnly className="w-full bg-slate-50/80 text-slate-400 px-4 py-4 rounded-2xl font-bold text-[11px] ring-1 ring-slate-100 outline-none" />
-            <input value={staffIdInput} onChange={e => setStaffIdInput(e.target.value)} className="w-full bg-white/80 px-4 py-4 rounded-2xl font-bold ring-1 ring-slate-100 focus:ring-blue-500 outline-none" placeholder="Staff ID (รหัสพนักงาน)" />
+            <input value={staffIdInput} onChange={e => setStaffIdInput(e.target.value)} className="w-full bg-white/80 px-4 py-4 rounded-2xl font-bold ring-1 ring-slate-100 focus:ring-blue-500 outline-none" placeholder="Staff ID (เช่น 2624)" />
             {loginError && <p className="text-[10px] font-bold text-rose-600 text-center">{loginError}</p>}
             <button onClick={handleLogin} disabled={loading} className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs">
               {loading ? <Loader2 className="animate-spin" /> : 'LOGIN'}
@@ -378,7 +392,10 @@ const App: React.FC = () => {
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg"><Calendar size={16} strokeWidth={3} /></div>
           <div><h1 className="font-black text-slate-800 text-sm leading-none">LMS</h1><p className="text-[7px] font-black text-blue-500 uppercase tracking-widest mt-0.5">Cloud System</p></div>
         </div>
-        <button onClick={() => fetchData(user!)} className="p-2 text-slate-300 hover:text-blue-600 transition-colors"><RefreshCcw size={16} className={loading ? "animate-spin" : ""} /></button>
+        <div className="flex items-center gap-2">
+           {isEligibleManager && <div className="px-2 py-1 bg-blue-50 rounded-md"><span className="text-[8px] font-black text-blue-600 uppercase">Manager Mode</span></div>}
+           <button onClick={() => fetchData(user!)} className="p-2 text-slate-300 hover:text-blue-600 transition-colors"><RefreshCcw size={16} className={loading ? "animate-spin" : ""} /></button>
+        </div>
       </header>
 
       <main className="flex-1 p-5 overflow-y-auto">
@@ -395,7 +412,9 @@ const App: React.FC = () => {
             </section>
 
             <div className="grid grid-cols-3 gap-2">
-              {balances.map(b => <DashboardCard key={b.type} type={b.type} used={b.used} remain={b.remain} />)}
+              {balances.length > 0 ? balances.map(b => <DashboardCard key={b.type} type={b.type} used={b.used} remain={b.remain} />) : (
+                <div className="col-span-3 py-6 text-center text-[10px] text-slate-400 font-bold uppercase">กำลังโหลดสิทธิ์การลา...</div>
+              )}
             </div>
 
             <section className="space-y-4">
@@ -404,9 +423,13 @@ const App: React.FC = () => {
                 <button onClick={() => setView('history')} className="text-[8px] font-black text-blue-500 uppercase">ทั้งหมด</button>
               </div>
               <div className="space-y-2">
-                {myRequests.slice(0, 3).map(req => (
-                  <RequestCard key={req.id} req={req} user={user} onViewImage={setZoomImg} onAction={handleAction} onResubmit={handleResubmit} />
-                ))}
+                {myRequests.length > 0 ? (
+                  myRequests.slice(0, 3).map(req => (
+                    <RequestCard key={req.id} req={req} user={user} onViewImage={setZoomImg} onAction={handleAction} onResubmit={handleResubmit} />
+                  ))
+                ) : (
+                  <div className="py-10 text-center border border-dashed rounded-2xl text-[9px] text-slate-300 font-black uppercase">ไม่พบรายการลา</div>
+                )}
               </div>
             </section>
           </div>
@@ -431,6 +454,7 @@ const App: React.FC = () => {
                 ) : (
                   <div className="py-20 text-center border border-dashed border-white/10 rounded-2xl">
                     <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">ไม่มีรายการค้างพิจารณา</p>
+                    <button onClick={() => fetchData(user!)} className="mt-4 flex items-center gap-2 mx-auto text-[8px] font-black text-blue-400 uppercase"><RefreshCcw size={10} /> รีเฟรชข้อมูล</button>
                   </div>
                 )}
               </div>
@@ -489,7 +513,7 @@ const App: React.FC = () => {
             <div className="w-full space-y-2 border-t pt-6">
               <div className="flex justify-between p-3 bg-slate-50 rounded-xl"><span className="text-[9px] font-black text-slate-400">Employee ID</span><span className="font-bold text-slate-700 text-[11px]">{user?.staffId}</span></div>
               <div className="flex justify-between p-3 bg-slate-50 rounded-xl"><span className="text-[9px] font-black text-slate-400">Site</span><span className="font-bold text-slate-700 text-[11px]">{user?.siteId}</span></div>
-              <div className="flex justify-between p-3 bg-slate-50 rounded-xl"><span className="text-[9px] font-black text-slate-400">Role</span><span className="font-bold text-slate-700 text-[11px] uppercase">{user?.roleType}</span></div>
+              <div className="flex justify-between p-3 bg-slate-50 rounded-xl"><span className="text-[9px] font-black text-slate-400">Role Status</span><span className={`font-bold text-[11px] uppercase ${isEligibleManager ? 'text-emerald-500' : 'text-slate-400'}`}>{user?.roleType} {isEligibleManager ? '(MANAGER)' : ''}</span></div>
             </div>
             <button onClick={() => setIsLoggedIn(false)} className="w-full mt-8 bg-rose-50 text-rose-500 font-black py-4 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest"><LogOut size={16} /> Logout</button>
           </div>
