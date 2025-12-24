@@ -130,9 +130,10 @@ const App: React.FC = () => {
   const fetchData = async (p: UserProfile) => {
     setLoading(true);
     try {
+      const isManager = p.roleType === UserRole.SUPERVISOR || p.roleType === UserRole.HR;
       const [b, r] = await Promise.all([
         SheetService.getBalances(p.staffId),
-        SheetService.getRequests(p.staffId, p.roleType === UserRole.SUPERVISOR)
+        SheetService.getRequests(p.staffId, isManager)
       ]);
       if (b) setBalances(b.balances);
       setRequests(r);
@@ -143,30 +144,23 @@ const App: React.FC = () => {
   const handleLogin = async () => {
     setLoginError(null);
     if (!staffIdInput.trim() || !userIdInput.trim()) {
-      setLoginError('กรุณากรอกรหัสพนักงานให้ครบถ้วน');
+      setLoginError('กรอกรหัสพนักงานไม่ถูกต้อง');
       return;
     }
     
     setLoading(true);
     try {
-      // 1. ตรวจสอบข้อมูลพนักงานจาก Staff ID
       const p = await SheetService.getProfile(staffIdInput);
-      
       if (!p) {
         setLoginError('ไม่พบรหัสพนักงานนี้ในระบบฐานข้อมูล');
         setLoading(false);
         return;
       }
-
-      // 2. ตรวจสอบว่ารหัสพนักงานนี้ถูกผูกไว้กับ LINE ID อื่นหรือไม่ (Security Check)
-      // กรณี p.lineUserId มีค่า และไม่ตรงกับ LINE ID ปัจจุบัน
       if (p.lineUserId && p.lineUserId !== userIdInput) {
         setLoginError('รหัสพนักงานนี้ถูกลงทะเบียนด้วยบัญชี LINE อื่นไปแล้ว โปรดติดต่อ HR');
         setLoading(false);
         return;
       }
-
-      // 3. หากผ่านการตรวจสอบ ให้ทำการผูก ID และเข้าสู่ระบบ
       await SheetService.linkLineId(staffIdInput, userIdInput);
       setUser({ ...p, lineUserId: userIdInput });
       fetchData(p);
@@ -278,6 +272,7 @@ const App: React.FC = () => {
       <main className="flex-1 p-5 overflow-y-auto">
         {view === 'dashboard' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* 1. Profile Section */}
             <section className="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-50 relative overflow-hidden">
               <div className="flex items-start justify-between relative z-10">
                 <div className="flex items-center gap-3">
@@ -305,6 +300,7 @@ const App: React.FC = () => {
               </div>
             </section>
 
+            {/* 2. Leave Balance Section */}
             <section className="space-y-4">
               <div className="flex items-center gap-2 px-1">
                 <div className="w-1 h-3 bg-blue-500 rounded-full" />
@@ -317,42 +313,68 @@ const App: React.FC = () => {
               </div>
             </section>
 
-            {user?.roleType === UserRole.SUPERVISOR && requests.some(r => r.status === LeaveStatus.PENDING && r.staffId !== user.staffId) && (
-              <section className="bg-slate-900 p-6 rounded-[2.5rem] shadow-xl text-white space-y-4 overflow-hidden relative">
+            {/* 3. Supervisor Management Section (Conditional) */}
+            {(user?.roleType === UserRole.SUPERVISOR || user?.roleType === UserRole.HR) && (
+              <section className="bg-slate-900 p-6 rounded-[2.5rem] shadow-xl text-white space-y-5 overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 blur-[60px] rounded-full -mr-16 -mt-16" />
                 <div className="flex items-center justify-between relative z-10">
                   <div className="flex items-center gap-2">
-                    <ShieldCheck size={14} className="text-blue-400" />
-                    <h3 className="font-black text-[9px] uppercase tracking-widest">คำขอรออนุมัติ</h3>
+                    <div className="w-7 h-7 bg-blue-600/20 rounded-lg flex items-center justify-center">
+                       <ShieldCheck size={14} className="text-blue-400" />
+                    </div>
+                    <h3 className="font-black text-[9px] uppercase tracking-widest">การอนุมัติใบลา (รออนุมัติ)</h3>
                   </div>
                   <span className="px-2 py-0.5 bg-blue-600 rounded-full text-[8px] font-black uppercase">
                     {requests.filter(r => r.status === LeaveStatus.PENDING && r.staffId !== user.staffId).length} รายการ
                   </span>
                 </div>
-                <div className="space-y-2.5 relative z-10">
-                  {requests.filter(r => r.status === LeaveStatus.PENDING && r.staffId !== user.staffId).map(req => (
-                    <div key={req.id} className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <p className="text-[8px] font-black text-blue-400 uppercase tracking-[0.2em] mb-0.5">{req.staffName}</p>
-                          <h4 className="font-bold text-xs">{getLeaveTheme(req.type).label}</h4>
-                          <p className="text-[9px] text-slate-500 mt-0.5 font-medium">{req.startDate} - {req.endDate}</p>
+                
+                <div className="space-y-3 relative z-10">
+                  {requests.filter(r => r.status === LeaveStatus.PENDING && r.staffId !== user.staffId).length > 0 ? (
+                    requests.filter(r => r.status === LeaveStatus.PENDING && r.staffId !== user.staffId).map(req => (
+                      <div key={req.id} className="bg-white/5 rounded-2xl p-4 border border-white/5 hover:border-blue-500/30 transition-all group">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="space-y-1">
+                            <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest leading-none">{req.staffName}</p>
+                            <div className="flex items-center gap-2">
+                               <div className={`w-1.5 h-1.5 rounded-full ${getLeaveTheme(req.type).color}`} />
+                               <h4 className="font-bold text-xs">{getLeaveTheme(req.type).label}</h4>
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                               <Clock size={10} className="text-slate-500" />
+                               <p className="text-[9px] text-slate-400 font-medium">{req.startDate} — {req.endDate}</p>
+                               <span className="text-[9px] text-blue-400/80 font-black px-1.5 py-0.5 bg-blue-500/10 rounded">({req.totalDays} วัน)</span>
+                            </div>
+                          </div>
+                          {req.attachmentUrl && (
+                            <button onClick={()=>setZoomImg(req.attachmentUrl!)} className="w-8 h-8 bg-white/5 rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-400 transition-colors">
+                              <Search size={14} />
+                            </button>
+                          )}
                         </div>
-                        {req.attachmentUrl && (
-                          <button onClick={()=>setZoomImg(req.attachmentUrl!)} className="p-1.5 bg-white/5 rounded-lg text-slate-400">
-                            <Search size={12} />
-                          </button>
+                        
+                        {req.reason && (
+                           <div className="bg-white/[0.03] p-2.5 rounded-xl mb-4 border border-white/[0.05]">
+                              <p className="text-[9px] text-slate-500 leading-relaxed italic line-clamp-2">" {req.reason} "</p>
+                           </div>
                         )}
+
+                        <div className="flex gap-2.5">
+                          <button onClick={()=>handleAction(req.id, LeaveStatus.APPROVED)} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-black py-2.5 rounded-xl text-[9px] uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-blue-600/20">Approve</button>
+                          <button onClick={()=>handleAction(req.id, LeaveStatus.REJECTED)} className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-black py-2.5 rounded-xl text-[9px] uppercase tracking-widest active:scale-95 transition-all">Reject</button>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <button onClick={()=>handleAction(req.id, LeaveStatus.APPROVED)} className="flex-1 bg-blue-600 text-white font-black py-2 rounded-xl text-[8px] uppercase tracking-widest active:scale-95 transition-all">Approve</button>
-                        <button onClick={()=>handleAction(req.id, LeaveStatus.REJECTED)} className="flex-1 bg-slate-800 text-white font-black py-2 rounded-xl text-[8px] uppercase tracking-widest active:scale-95 transition-all">Reject</button>
-                      </div>
+                    ))
+                  ) : (
+                    <div className="py-8 text-center bg-white/5 rounded-[2rem] border border-dashed border-white/10">
+                       <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">ไม่มีรายการคำขอใหม่</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </section>
             )}
 
+            {/* 4. Recent History Section */}
             <section className="space-y-4">
               <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2">
@@ -364,12 +386,14 @@ const App: React.FC = () => {
               <div className="space-y-2">
                 {requests.filter(r => r.staffId === user?.staffId).length > 0 ? (
                   requests.filter(r => r.staffId === user?.staffId).slice(0, 3).map(req => (
-                    <div key={req.id} className="bg-white p-3.5 rounded-2xl border border-slate-50 flex items-center justify-between shadow-sm">
+                    <div key={req.id} className="bg-white p-3.5 rounded-2xl border border-slate-50 flex items-center justify-between shadow-sm transition-all hover:bg-slate-50/50">
                       <div className="flex items-center gap-3">
                         <div className={`w-1.5 h-1.5 rounded-full ${getLeaveTheme(req.type).color}`} />
                         <div>
-                          <h5 className="font-black text-[11px] text-slate-800">{getLeaveTheme(req.type).label}</h5>
-                          <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">{req.startDate}</p>
+                          <h5 className="font-black text-[11px] text-slate-800 leading-tight">{getLeaveTheme(req.type).label}</h5>
+                          <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">
+                            {req.startDate} <span className="mx-0.5 text-slate-200">|</span> {req.endDate}
+                          </p>
                         </div>
                       </div>
                       <StatusBadge status={req.status} />
@@ -384,7 +408,7 @@ const App: React.FC = () => {
             </section>
           </div>
         )}
-
+        {/* ... views logic unchanged ... */}
         {view === 'new' && (
           <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
             <header className="flex items-center gap-3">
