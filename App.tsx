@@ -371,13 +371,13 @@ const App: React.FC = () => {
             {linePicture ? <img src={linePicture} className="w-full h-full object-cover" /> : <UserCircle size={64} className="text-slate-200" />}
           </div>
           <div>
-            <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">Leave Workflow Online</p>
+            <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">LMS</p>
             <h2 className="text-xl font-black text-slate-800 tracking-tight">{lineName || 'LINE User'}</h2>
           </div>
           
           <div className="w-full space-y-4 text-left">
             <div className="space-y-1.5">
-               <label className="text-[9px] font-black text-slate-400 uppercase ml-1">LINE UID (Your identity)</label>
+               <label className="text-[9px] font-black text-slate-400 uppercase ml-1">User ID</label>
                <div className="flex items-center gap-2 w-full bg-slate-50/80 text-slate-400 px-4 py-3 rounded-2xl font-bold text-[9px] ring-1 ring-slate-100/50">
                   <Key size={12} className="text-blue-400" />
                   <span className="truncate">{userIdInput}</span>
@@ -392,7 +392,7 @@ const App: React.FC = () => {
                   value={staffIdInput} 
                   onChange={e => setStaffIdInput(e.target.value)} 
                   className="w-full bg-white pl-10 pr-4 py-4 rounded-2xl font-bold ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm transition-all" 
-                  placeholder="ป้อนรหัสพนักงาน (เช่น 2624)" 
+                  placeholder="ป้อนรหัสพนักงาน" 
                  />
                </div>
             </div>
@@ -413,7 +413,7 @@ const App: React.FC = () => {
             </button>
           </div>
           
-          <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Powered by LMS Backend</p>
+          <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">SMC Property Soft</p>
         </div>
       </div>
     </div>
