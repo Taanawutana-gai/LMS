@@ -280,6 +280,14 @@ const App: React.FC = () => {
         setLoading(false);
         return;
       }
+
+      // Check if User ID and Staff ID match if already linked in DB
+      if (p.lineUserId && p.lineUserId.trim() !== "" && p.lineUserId !== userIdInput) {
+        setLoginError('ขออภัย รหัสพนักงานนี้ถูกลงทะเบียนด้วยบัญชีอื่นแล้ว');
+        setLoading(false);
+        return;
+      }
+
       await SheetService.linkLineId(sid, userIdInput);
       const updatedUser = { ...p, lineUserId: userIdInput };
       setUser(updatedUser);
@@ -347,7 +355,7 @@ const App: React.FC = () => {
 
   if (!isLoggedIn) return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center font-sans">
-      <div className="w-full max-w-sm glass-card rounded-[3rem] shadow-2xl p-8 border border-white/40">
+      <div className="w-full max-sm glass-card rounded-[3rem] shadow-2xl p-8 border border-white/40">
         <div className="bg-white/50 rounded-[2.5rem] p-8 flex flex-col items-center gap-6">
           <div className="w-20 h-20 rounded-3xl overflow-hidden border-4 border-white shadow-xl bg-slate-100 flex items-center justify-center">
             {linePicture ? <img src={linePicture} className="w-full h-full object-cover" /> : <UserCircle size={64} className="text-slate-200" />}
@@ -464,7 +472,6 @@ const App: React.FC = () => {
         {view === 'approval' && isEligibleManager && (
           <div className="space-y-6 animate-in slide-in-from-right-10 duration-500">
              <header className="flex items-center gap-3">
-              {/* Shield icon and site scope display removed as per user request */}
             </header>
             <section className="bg-slate-900 p-6 rounded-[2.5rem] shadow-2xl text-white space-y-6 min-h-[450px] border border-white/5">
               <div className="flex items-center justify-between">
