@@ -281,7 +281,6 @@ const App: React.FC = () => {
         return;
       }
 
-      // Check if User ID and Staff ID match if already linked in DB
       if (p.lineUserId && p.lineUserId.trim() !== "" && p.lineUserId !== userIdInput) {
         setLoginError('ขออภัย รหัสพนักงานนี้ถูกลงทะเบียนด้วยบัญชีอื่นแล้ว');
         setLoading(false);
@@ -502,24 +501,33 @@ const App: React.FC = () => {
             </header>
             <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-50 space-y-6">
               <div className="space-y-2">
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">ประเภทการลา</label>
-                <select value={newReq.type} onChange={e => setNewReq({...newReq, type: e.target.value as LeaveType})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-[12px] text-slate-700 ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500 appearance-none">
+                <label className="text-[14px] font-black text-slate-400 uppercase tracking-widest">ประเภทการลา</label>
+                <select value={newReq.type} onChange={e => setNewReq({...newReq, type: e.target.value as LeaveType})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-[14px] text-slate-700 ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500 appearance-none">
                   {Object.values(LeaveType).map(t => <option key={t} value={t}>{getLeaveTheme(t).label}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">วันเริ่ม</label><input type="date" value={newReq.startDate} onChange={e => setNewReq({...newReq, startDate:e.target.value})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-[11px] ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500" /></div>
-                <div className="space-y-2"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">วันสิ้นสุด</label><input type="date" value={newReq.endDate} onChange={e => setNewReq({...newReq, endDate:e.target.value})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-[11px] ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500" /></div>
+                <div className="space-y-2">
+                  <label className="text-[14px] font-black text-slate-400 uppercase tracking-widest">วันเริ่ม</label>
+                  <input type="date" value={newReq.startDate} onChange={e => setNewReq({...newReq, startDate:e.target.value})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-[14px] ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[14px] font-black text-slate-400 uppercase tracking-widest">วันสิ้นสุด</label>
+                  <input type="date" value={newReq.endDate} onChange={e => setNewReq({...newReq, endDate:e.target.value})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-[14px] ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500" />
+                </div>
               </div>
-              <div className="space-y-2"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">เหตุผลการลา</label><textarea value={newReq.reason} onChange={e => setNewReq({...newReq, reason:e.target.value})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-xs h-24 resize-none ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500" placeholder="ระบุเหตุผล..." /></div>
               <div className="space-y-2">
-                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">แนบรูปภาพ</label>
+                <label className="text-[14px] font-black text-slate-400 uppercase tracking-widest">เหตุผลการลา</label>
+                <textarea value={newReq.reason} onChange={e => setNewReq({...newReq, reason:e.target.value})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-[14px] h-24 resize-none ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500" placeholder="ระบุเหตุผล..." />
+              </div>
+              <div className="space-y-2">
+                 <label className="text-[14px] font-black text-slate-400 uppercase tracking-widest">แนบรูปภาพ</label>
                  <div onClick={() => fileInputRef.current?.click()} className="w-full h-36 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center cursor-pointer overflow-hidden relative">
                    <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*" />
                    {newReq.attachment ? <img src={newReq.attachment} className="w-full h-full object-cover" /> : <Camera size={24} className="text-slate-300" />}
                  </div>
               </div>
-              <button onClick={handleSubmit} disabled={loading} className="w-full bg-blue-600 text-white font-black py-5 rounded-3xl shadow-xl active:scale-95 transition-all text-[11px] uppercase tracking-widest">
+              <button onClick={handleSubmit} disabled={loading} className="w-full bg-blue-600 text-white font-black py-5 rounded-3xl shadow-xl active:scale-95 transition-all text-[14px] uppercase tracking-widest">
                 {loading ? <Loader2 className="animate-spin" /> : "ส่งใบลา"}
               </button>
             </div>
