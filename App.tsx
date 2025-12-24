@@ -54,17 +54,16 @@ const StatusBadge = ({ status }: { status: LeaveStatus }) => {
   return <span className={`px-2 py-0.5 rounded-full text-[8px] font-black border uppercase tracking-widest ${styles[status] || styles[LeaveStatus.PENDING]}`}>{status}</span>;
 };
 
-// --- Sub Components ---
-
 const RequestCard: React.FC<{ 
   req: LeaveRequest; 
   user: UserProfile | null;
   isManagerView?: boolean;
   isDashboardView?: boolean;
+  isHistoryView?: boolean;
   onViewImage: (url: string) => void;
   onAction: (id: string, status: LeaveStatus, reason?: string) => void;
   onResubmit?: (req: LeaveRequest) => void;
-}> = ({ req, user, isManagerView, isDashboardView, onViewImage, onAction, onResubmit }) => {
+}> = ({ req, user, isManagerView, isDashboardView, isHistoryView, onViewImage, onAction, onResubmit }) => {
   const [showRejectInput, setShowRejectInput] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   
@@ -73,6 +72,10 @@ const RequestCard: React.FC<{
   const currentStatus = String(req.status || 'Pending').toLowerCase().trim();
   const isPending = currentStatus === 'pending';
   const isRejected = currentStatus === 'rejected';
+
+  // ขนาดฟอนต์แยกตามมุมมอง
+  const labelSize = isDashboardView ? 'text-[16px]' : (isHistoryView ? 'text-[18px]' : 'text-[11px]');
+  const detailSize = isDashboardView ? 'text-[13px]' : (isHistoryView ? 'text-[14px]' : 'text-[9px]');
 
   return (
     <div className={`relative overflow-hidden p-4 rounded-2xl border transition-all ${isManagerView ? 'bg-white/5 border-white/5 shadow-inner' : 'bg-white border-slate-50 shadow-sm'} space-y-3`}>
@@ -88,7 +91,7 @@ const RequestCard: React.FC<{
                 <span className="text-[7px] font-bold text-slate-500 bg-white/5 px-1 rounded uppercase">{req.siteId}</span>
               </div>
             )}
-            <h5 className={`font-black ${isDashboardView ? 'text-[15px]' : 'text-[11px]'} leading-tight ${isManagerView ? 'text-white' : 'text-slate-800'}`}>{theme.label}</h5>
+            <h5 className={`font-black ${labelSize} leading-tight ${isManagerView ? 'text-white' : 'text-slate-800'}`}>{theme.label}</h5>
             <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">
               {formatDate(req.startDate)} <span className="mx-0.5 text-slate-200">|</span> {formatDate(req.endDate)}
             </p>
@@ -104,21 +107,21 @@ const RequestCard: React.FC<{
         </div>
       </div>
       
-      <div className={`flex justify-between items-center ${isDashboardView ? 'text-[12px]' : 'text-[9px]'} font-bold text-slate-400 uppercase tracking-tighter`}>
-         <span className={`${isManagerView ? 'bg-white/5' : 'bg-slate-50'} px-2 py-0.5 rounded-md font-black`}>{req.totalDays} <span className={isDashboardView ? 'text-[12px]' : ''}>วัน</span></span>
+      <div className={`flex justify-between items-center ${detailSize} font-bold text-slate-400 uppercase tracking-tighter`}>
+         <span className={`${isManagerView ? 'bg-white/5' : 'bg-slate-50'} px-2 py-0.5 rounded-md font-black`}>{req.totalDays} <span className={detailSize}>วัน</span></span>
          {req.approver && <span className="text-slate-300">By: {req.approver}</span>}
       </div>
 
       {!isDashboardView && req.reason && (
          <div className={`p-2.5 rounded-xl border ${isManagerView ? 'bg-white/5 border-white/5' : 'bg-slate-50/50 border-slate-50'}`}>
-            <p className={`text-[9px] leading-relaxed italic ${isManagerView ? 'text-slate-400' : 'text-slate-500'}`}>" {req.reason} "</p>
+            <p className={`${detailSize} leading-relaxed italic ${isManagerView ? 'text-slate-400' : 'text-slate-500'}`}>" {req.reason} "</p>
          </div>
       )}
 
       {isRejected && req.approverReason && !isDashboardView && (
         <div className="bg-rose-500/10 p-2 rounded-lg border border-rose-500/20">
            <p className="text-[8px] font-black text-rose-500 uppercase mb-0.5">Note from Approver:</p>
-           <p className="text-[9px] text-rose-400 leading-tight italic">"{req.approverReason}"</p>
+           <p className={`${detailSize} text-rose-400 leading-tight italic`}>"{req.approverReason}"</p>
         </div>
       )}
 
@@ -204,8 +207,6 @@ const DashboardCard: React.FC<{ type: LeaveType; used: number; remain: number }>
   );
 };
 
-// --- Main Application ---
-
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -228,12 +229,7 @@ const App: React.FC = () => {
   const checkIsManager = (role?: string) => {
     if (!role) return false;
     const r = role.toLowerCase().trim();
-    return r.includes('supervisor') || 
-           r.includes('hr') || 
-           r.includes('manager') || 
-           r.includes('lead') || 
-           r.includes('admin') || 
-           r.includes('head');
+    return r.includes('supervisor') || r.includes('hr') || r.includes('manager') || r.includes('lead') || r.includes('admin') || r.includes('head');
   };
 
   const fetchData = async (p: UserProfile) => {
@@ -246,9 +242,7 @@ const App: React.FC = () => {
       ]);
       if (b) setBalances(b.balances);
       setRequests(r || []);
-    } catch (e) { 
-      console.error('FetchData Error:', e); 
-    }
+    } catch (e) { console.error('FetchData Error:', e); }
     setLoading(false);
   };
 
@@ -289,10 +283,7 @@ const App: React.FC = () => {
       setUser(updatedUser);
       fetchData(updatedUser);
       setIsLoggedIn(true);
-    } catch (e) { 
-      console.error('Login Error:', e);
-      setLoginError('เกิดข้อผิดพลาดในการเชื่อมต่อ'); 
-    }
+    } catch (e) { setLoginError('เกิดข้อผิดพลาดในการเชื่อมต่อ'); }
     setLoading(false);
   };
 
@@ -328,16 +319,10 @@ const App: React.FC = () => {
     const days = calculateDays(newReq.startDate, newReq.endDate);
     if (days <= 0) { alert('วันที่ไม่ถูกต้อง'); return; }
     if (!newReq.reason) { alert('กรุณาระบุเหตุผล'); return; }
-    
     setLoading(true);
     try {
       const res = await SheetService.submitRequest({
-        ...newReq, 
-        staffId: user!.staffId, 
-        staffName: user!.name, 
-        siteId: user!.siteId, 
-        totalDays: days, 
-        appliedDate: new Date().toISOString().split('T')[0]
+        ...newReq, staffId: user!.staffId, staffName: user!.name, siteId: user!.siteId, totalDays: days, appliedDate: new Date().toISOString().split('T')[0]
       });
       if (res.success) { 
         alert('ส่งใบลาสำเร็จ');
@@ -352,16 +337,10 @@ const App: React.FC = () => {
   const isEligibleManager = checkIsManager(user?.roleType);
   const myStaffId = String(user?.staffId || '').trim().toLowerCase();
   const mySiteId = String(user?.siteId || '').trim().toLowerCase();
-  
-  const myRequests = requests.filter(r => 
-    String(r.staffId || '').trim().toLowerCase() === myStaffId
-  );
-  
+  const myRequests = requests.filter(r => String(r.staffId || '').trim().toLowerCase() === myStaffId);
   const teamPending = requests.filter(r => {
     const rStatus = String(r.status || '').toLowerCase().trim();
-    const rStaffId = String(r.staffId || '').trim().toLowerCase();
-    const rSiteId = String(r.siteId || '').trim().toLowerCase();
-    return rStatus === 'pending' && rStaffId !== myStaffId && rSiteId === mySiteId;
+    return rStatus === 'pending' && String(r.staffId || '').trim().toLowerCase() !== myStaffId && String(r.siteId || '').trim().toLowerCase() === mySiteId;
   });
 
   if (!isLoggedIn) return (
@@ -375,7 +354,6 @@ const App: React.FC = () => {
             <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">LMS</p>
             <h2 className="text-xl font-black text-slate-800 tracking-tight">{lineName || 'LINE User'}</h2>
           </div>
-          
           <div className="w-full space-y-4 text-left">
             <div className="space-y-1.5">
                <label className="text-[9px] font-black text-slate-400 uppercase ml-1">User ID</label>
@@ -384,36 +362,18 @@ const App: React.FC = () => {
                   <span className="truncate">{userIdInput}</span>
                </div>
             </div>
-            
             <div className="space-y-1.5">
                <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Staff ID</label>
                <div className="relative">
                  <Hash size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                 <input 
-                  value={staffIdInput} 
-                  onChange={e => setStaffIdInput(e.target.value)} 
-                  className="w-full bg-white pl-10 pr-4 py-4 rounded-2xl font-bold ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm transition-all" 
-                  placeholder="ป้อนรหัสพนักงาน" 
-                 />
+                 <input value={staffIdInput} onChange={e => setStaffIdInput(e.target.value)} className="w-full bg-white pl-10 pr-4 py-4 rounded-2xl font-bold ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm transition-all" placeholder="ป้อนรหัสพนักงาน" />
                </div>
             </div>
-
-            {loginError && (
-              <div className="flex items-center gap-2 justify-center bg-rose-50 p-2 rounded-xl">
-                <AlertCircle size={12} className="text-rose-500" />
-                <p className="text-[9px] font-bold text-rose-600">{loginError}</p>
-              </div>
-            )}
-
-            <button 
-              onClick={handleLogin} 
-              disabled={loading} 
-              className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs disabled:opacity-50"
-            >
+            {loginError && <div className="flex items-center gap-2 justify-center bg-rose-50 p-2 rounded-xl"><AlertCircle size={12} className="text-rose-500" /><p className="text-[9px] font-bold text-rose-600">{loginError}</p></div>}
+            <button onClick={handleLogin} disabled={loading} className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs disabled:opacity-50">
               {loading ? <Loader2 className="animate-spin" /> : <><ScanFace size={16} /> Login to System</>}
             </button>
           </div>
-          
           <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">SMC Property Soft</p>
         </div>
       </div>
@@ -449,14 +409,14 @@ const App: React.FC = () => {
                 </div>
                 <div><h2 className="text-base font-black text-slate-800 leading-tight tracking-tight">{user?.name}</h2><p className="text-blue-600 font-bold text-[10px] uppercase tracking-widest mt-0.5">{user?.position}</p></div>
               </div>
-              <button onClick={() => setView('new')} className="bg-blue-600 text-white p-3 rounded-xl active:scale-90 transition-all shadow-lg shadow-blue-100 flex items-center justify-center" title="ยื่นใบลาส่วนตัว">
+              <button onClick={() => setView('new')} className="bg-blue-600 text-white p-3 rounded-xl active:scale-90 transition-all shadow-lg shadow-blue-100 flex items-center justify-center">
                 <PlusCircle size={20} />
               </button>
             </section>
 
             <div className="grid grid-cols-3 gap-2.5">
               {balances.length > 0 ? balances.map(b => <DashboardCard key={b.type} type={b.type} used={b.used} remain={b.remain} />) : (
-                <div className="col-span-3 py-8 text-center bg-white/50 border border-dashed rounded-3xl text-[16px] text-slate-300 font-black uppercase tracking-widest">กำลังดึงข้อมูลสิทธิ์การลา...</div>
+                <div className="col-span-3 py-8 text-center bg-white/50 border border-dashed rounded-3xl text-[16px] text-slate-300 font-black uppercase tracking-widest">กำลังดึงข้อมูล...</div>
               )}
             </div>
 
@@ -481,49 +441,16 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {view === 'approval' && isEligibleManager && (
-          <div className="space-y-6 animate-in slide-in-from-right-10 duration-500">
-             <header className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-xl"><ShieldCheck size={20} /></div>
-              <div>
-                <h2 className="text-lg font-black text-slate-800 tracking-tight leading-none">รายการรออนุมัติ</h2>
-                <p className="text-[8px] font-black text-blue-500 uppercase tracking-widest mt-1">Site Scope: {user?.siteId}</p>
-              </div>
-            </header>
-            <section className="bg-slate-900 p-6 rounded-[2.5rem] shadow-2xl text-white space-y-6 min-h-[450px] relative border border-white/5">
-              <div className="flex items-center justify-between">
-                <h3 className="font-black text-[9px] uppercase tracking-[0.3em] text-slate-400">Team Pending</h3>
-                <span className="px-2.5 py-1 bg-blue-600 rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg shadow-blue-600/20">{teamPending.length} รายการ</span>
-              </div>
-              <div className="space-y-4">
-                {teamPending.length > 0 ? (
-                  teamPending.map(req => (
-                    <RequestCard key={req.id} req={req} user={user} isManagerView onViewImage={setZoomImg} onAction={handleAction} />
-                  ))
-                ) : (
-                  <div className="py-24 text-center border border-dashed border-white/10 rounded-3xl flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center text-slate-500"><CheckCircle2 size={24} /></div>
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">ไม่มีรายการค้างพิจารณา</p>
-                      <p className="text-[7px] text-slate-500 font-bold uppercase tracking-tighter italic">ในสาขา {user?.siteId} ของคุณ</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </section>
-          </div>
-        )}
-
         {view === 'history' && (
           <div className="space-y-6 animate-in fade-in duration-300">
             <header className="flex items-center gap-3">
-              <button onClick={() => setView('dashboard')} className="p-2 bg-white rounded-xl text-slate-400 shadow-sm active:scale-90 transition-all"><ChevronLeft size={20} /></button>
+              <button onClick={() => setView('dashboard')} className="p-2 bg-white rounded-xl text-slate-400 shadow-sm"><ChevronLeft size={20} /></button>
               <h2 className="text-lg font-black text-slate-800 tracking-tight">ประวัติการลาทั้งหมด</h2>
             </header>
             <div className="space-y-3">
               {myRequests.length > 0 ? (
                 myRequests.map(req => (
-                  <RequestCard key={req.id} req={req} user={user} onViewImage={setZoomImg} onAction={handleAction} onResubmit={handleResubmit} />
+                  <RequestCard key={req.id} req={req} user={user} isHistoryView onViewImage={setZoomImg} onAction={handleAction} onResubmit={handleResubmit} />
                 ))
               ) : (
                 <div className="py-20 text-center bg-white rounded-[2.5rem] border border-dashed text-[10px] font-black text-slate-300 uppercase">ไม่พบข้อมูล</div>
@@ -532,61 +459,53 @@ const App: React.FC = () => {
           </div>
         )}
 
+        {view === 'approval' && isEligibleManager && (
+          <div className="space-y-6">
+             <header className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-xl"><ShieldCheck size={20} /></div>
+              <div><h2 className="text-lg font-black text-slate-800 tracking-tight leading-none">รายการรออนุมัติ</h2><p className="text-[8px] font-black text-blue-500 uppercase tracking-widest mt-1">Site Scope: {user?.siteId}</p></div>
+            </header>
+            <section className="bg-slate-900 p-6 rounded-[2.5rem] shadow-2xl text-white space-y-6 min-h-[450px] border border-white/5">
+              <div className="flex items-center justify-between"><h3 className="font-black text-[9px] uppercase tracking-[0.3em] text-slate-400">Team Pending</h3><span className="px-2.5 py-1 bg-blue-600 rounded-full text-[9px] font-black uppercase tracking-widest">{teamPending.length} รายการ</span></div>
+              <div className="space-y-4">
+                {teamPending.length > 0 ? teamPending.map(req => (<RequestCard key={req.id} req={req} user={user} isManagerView onViewImage={setZoomImg} onAction={handleAction} />)) : (
+                  <div className="py-24 text-center border border-dashed border-white/10 rounded-3xl flex flex-col items-center gap-4">
+                    <CheckCircle2 size={24} className="text-slate-500" />
+                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">ไม่มีรายการค้างพิจารณา</p>
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
+        )}
+
         {view === 'new' && (
           <div className="space-y-6 animate-in slide-in-from-right-10 duration-300">
             <header className="flex items-center gap-3">
               <button onClick={() => setView('dashboard')} className="p-2 bg-white rounded-xl text-slate-400 shadow-sm"><ChevronLeft size={20} /></button>
-              <div>
-                <h2 className="text-lg font-black text-slate-800 tracking-tight">ยื่นใบลาใหม่</h2>
-                <p className="text-[8px] font-black text-blue-500 uppercase tracking-widest mt-0.5">Personal Leave Request</p>
-              </div>
+              <h2 className="text-lg font-black text-slate-800 tracking-tight">ยื่นใบลาใหม่</h2>
             </header>
             <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-50 space-y-6">
-              <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl">
-                 <p className="text-[10px] text-blue-700 font-bold leading-relaxed">
-                   บันทึกการลาสำหรับ: <span className="font-black">{user?.name}</span> ({user?.staffId})
-                 </p>
-              </div>
-
               <div className="space-y-2">
-                <label className="text-[9px] font-black text-slate-400 uppercase ml-1 tracking-widest">ประเภทการลา</label>
-                <select value={newReq.type} onChange={e => setNewReq({...newReq, type: e.target.value as LeaveType})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-[12px] text-slate-700 ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500 transition-all appearance-none">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">ประเภทการลา</label>
+                <select value={newReq.type} onChange={e => setNewReq({...newReq, type: e.target.value as LeaveType})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-[12px] text-slate-700 ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500 appearance-none">
                   {Object.values(LeaveType).map(t => <option key={t} value={t}>{getLeaveTheme(t).label}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black text-slate-400 uppercase ml-1 tracking-widest">วันเริ่ม</label>
-                  <input type="date" value={newReq.startDate} onChange={e => setNewReq({...newReq, startDate:e.target.value})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-[11px] ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black text-slate-400 uppercase ml-1 tracking-widest">วันสิ้นสุด</label>
-                  <input type="date" value={newReq.endDate} onChange={e => setNewReq({...newReq, endDate:e.target.value})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-[11px] ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500" />
-                </div>
+                <div className="space-y-2"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">วันเริ่ม</label><input type="date" value={newReq.startDate} onChange={e => setNewReq({...newReq, startDate:e.target.value})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-[11px] ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500" /></div>
+                <div className="space-y-2"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">วันสิ้นสุด</label><input type="date" value={newReq.endDate} onChange={e => setNewReq({...newReq, endDate:e.target.value})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-[11px] ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500" /></div>
               </div>
+              <div className="space-y-2"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">เหตุผลการลา</label><textarea value={newReq.reason} onChange={e => setNewReq({...newReq, reason:e.target.value})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-xs h-24 resize-none ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500" placeholder="ระบุเหตุผล..." /></div>
               <div className="space-y-2">
-                <label className="text-[9px] font-black text-slate-400 uppercase ml-1 tracking-widest">เหตุผลการลา</label>
-                <textarea value={newReq.reason} onChange={e => setNewReq({...newReq, reason:e.target.value})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-xs h-24 resize-none ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500" placeholder="ระบุเหตุผลในการลาครั้งนี้..." />
-              </div>
-              <div className="space-y-2">
-                 <label className="text-[9px] font-black text-slate-400 uppercase ml-1 tracking-widest">แนบรูปภาพ / หลักฐาน</label>
-                 <div onClick={() => fileInputRef.current?.click()} className="w-full h-36 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center cursor-pointer overflow-hidden relative hover:bg-slate-100 transition-all group">
+                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">แนบรูปภาพ</label>
+                 <div onClick={() => fileInputRef.current?.click()} className="w-full h-36 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center cursor-pointer overflow-hidden relative">
                    <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*" />
-                   {newReq.attachment ? (
-                     <div className="relative w-full h-full animate-in zoom-in duration-300">
-                        <img src={newReq.attachment} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[9px] font-black uppercase">เปลี่ยนรูปภาพ</div>
-                     </div>
-                   ) : (
-                     <div className="text-center">
-                       <Camera size={24} className="m-auto text-slate-300 mb-2 group-hover:scale-110 transition-transform" />
-                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">ถ่ายรูปหรือเลือกหลักฐาน</p>
-                     </div>
-                   )}
+                   {newReq.attachment ? <img src={newReq.attachment} className="w-full h-full object-cover" /> : <Camera size={24} className="text-slate-300" />}
                  </div>
               </div>
-              <button onClick={handleSubmit} disabled={loading} className="w-full bg-blue-600 text-white font-black py-5 rounded-3xl shadow-xl shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2 uppercase text-[11px] tracking-widest disabled:opacity-50 mt-4">
-                {loading ? <Loader2 className="animate-spin" /> : <><CheckCircle2 size={18} /> ส่งใบลาเข้าสู่ระบบ</>}
+              <button onClick={handleSubmit} disabled={loading} className="w-full bg-blue-600 text-white font-black py-5 rounded-3xl shadow-xl active:scale-95 transition-all text-[11px] uppercase tracking-widest">
+                {loading ? <Loader2 className="animate-spin" /> : "ส่งใบลา"}
               </button>
             </div>
           </div>
@@ -596,28 +515,14 @@ const App: React.FC = () => {
           <div className="bg-white rounded-[3rem] p-10 shadow-sm border border-slate-100 flex flex-col items-center animate-in zoom-in-95 duration-500">
             <div className="w-28 h-28 rounded-3xl overflow-hidden border-4 border-white shadow-2xl mb-6 relative">
               {linePicture ? <img src={linePicture} className="w-full h-full object-cover" /> : <UserCircle size={112} className="text-slate-100" />}
-              {isEligibleManager && <div className="absolute bottom-0 inset-x-0 bg-emerald-500 text-white text-[7px] font-black uppercase py-1 text-center tracking-widest">Manager</div>}
             </div>
             <h2 className="text-xl font-black text-slate-800 tracking-tight">{user?.name}</h2>
             <p className="text-blue-600 text-[9px] font-black uppercase tracking-widest bg-blue-50 px-5 py-1.5 rounded-full mt-3 mb-10">{user?.position}</p>
-            
-            <div className="w-full space-y-3 border-t border-slate-50 pt-8">
-              <div className="flex justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-50 group hover:border-blue-100 transition-colors">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Employee ID</span>
-                <span className="font-black text-slate-700 text-[12px]">{user?.staffId}</span>
-              </div>
-              <div className="flex justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-50">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Office Site</span>
-                <span className="font-black text-slate-700 text-[12px] uppercase">{user?.siteId}</span>
-              </div>
-              <div className="flex justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-50">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">System Role</span>
-                <span className={`font-black text-[10px] uppercase tracking-tighter ${isEligibleManager ? 'text-emerald-500' : 'text-slate-500'}`}>
-                   {user?.roleType} {isEligibleManager && '• Authorized'}
-                </span>
-              </div>
+            <div className="w-full space-y-3 border-t pt-8">
+              <div className="flex justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-50"><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Employee ID</span><span className="font-black text-slate-700">{user?.staffId}</span></div>
+              <div className="flex justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-50"><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Office Site</span><span className="font-black text-slate-700 uppercase">{user?.siteId}</span></div>
             </div>
-            <button onClick={() => setIsLoggedIn(false)} className="w-full mt-10 bg-rose-50 text-rose-500 font-black py-4.5 rounded-2xl flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest hover:bg-rose-100 transition-all active:scale-95"><LogOut size={16} /> Logout System</button>
+            <button onClick={() => setIsLoggedIn(false)} className="w-full mt-10 bg-rose-50 text-rose-500 font-black py-4.5 rounded-2xl flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest hover:bg-rose-100 transition-all"><LogOut size={16} /> Logout System</button>
           </div>
         )}
       </main>
@@ -629,19 +534,17 @@ const App: React.FC = () => {
           ...(isEligibleManager ? [{ icon: CheckSquare, label: 'อนุมัติ', v: 'approval' }] : []), 
           { icon: User, label: 'ฉัน', v: 'profile' }
         ].map(item => (
-          <button key={item.v} onClick={() => setView(item.v)} className={`flex flex-col items-center gap-1.5 transition-all px-4 group relative ${view === item.v ? 'text-blue-600' : 'text-slate-300 hover:text-blue-600 hover:bg-slate-50'}`}>
-            {view === item.v && <div className="absolute -top-1 w-1 h-1 bg-blue-600 rounded-full animate-bounce" />}
-            <item.icon size={22} strokeWidth={view === item.v ? 3 : 2} className={`transition-transform duration-300 ${view === item.v ? 'scale-110' : 'group-active:scale-90'}`} />
-            <span className={`text-[8px] font-black uppercase tracking-[0.15em] transition-opacity ${view === item.v ? 'opacity-100' : 'opacity-60'}`}>{item.label}</span>
+          <button key={item.v} onClick={() => setView(item.v)} className={`flex flex-col items-center gap-1.5 px-4 relative ${view === item.v ? 'text-blue-600' : 'text-slate-300'}`}>
+            <item.icon size={22} strokeWidth={view === item.v ? 3 : 2} />
+            <span className={`text-[8px] font-black uppercase tracking-[0.15em]`}>{item.label}</span>
           </button>
         ))}
       </nav>
 
       {zoomImg && (
-        <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-6 animate-in fade-in duration-300" onClick={() => setZoomImg(null)}>
-          <button className="absolute top-8 right-8 text-white/50 hover:text-white transition-colors p-2 bg-white/10 rounded-full"><X size={24} /></button>
-          <img src={zoomImg} className="max-w-full max-h-[80vh] rounded-[2rem] shadow-2xl border border-white/10 animate-in zoom-in duration-300" alt="Full view" />
-          <div className="absolute bottom-12 text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">แตะเพื่อย้อนกลับ</div>
+        <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-6" onClick={() => setZoomImg(null)}>
+          <button className="absolute top-8 right-8 text-white/50 p-2 bg-white/10 rounded-full"><X size={24} /></button>
+          <img src={zoomImg} className="max-w-full max-h-[80vh] rounded-[2rem] shadow-2xl animate-in zoom-in duration-300" alt="Full view" />
         </div>
       )}
     </div>
