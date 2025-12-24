@@ -115,7 +115,8 @@ function doPost(e) {
         const mimeType = parts[0].match(/:(.*?);/)[1];
         const base64Data = parts[1];
         
-        const cleanStaffId = (body.staffId || "unknown").replace(/[^a-zA-Z0-9]/g, '_');
+        // Fix: Explicitly cast staffId to String to prevent .replace() error if numeric
+        const cleanStaffId = String(body.staffId || "unknown").replace(/[^a-zA-Z0-9]/g, '_');
         const fileName = `${id}_${cleanStaffId}`;
         
         const blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType, fileName);
