@@ -18,23 +18,16 @@ const ATTACHMENT_FOLDER_ID = "1Or-p8MwFH35PbROikrvjDS3yQ-V6IOGr";
 
 /**
  * ฟังก์ชันสำหรับกระตุ้นหน้าต่างขออนุญาตสิทธิ์ (Authorization Dialog)
- * ต้องรันฟังก์ชันนี้ในหน้า Editor เท่านั้น
  */
 function triggerPermissionCheck() {
   try {
     const folder = DriveApp.getFolderById(ATTACHMENT_FOLDER_ID);
     const testFile = folder.createFile("permission_test.txt", "This is a test to trigger permissions.");
     Logger.log("Permission granted. Created test file: " + testFile.getUrl());
-    testFile.setTrashed(true); // ลบไฟล์ทดสอบทันที
+    testFile.setTrashed(true);
     
     const ss = SpreadsheetApp.openById(TARGET_SHEET_ID);
     Logger.log("Spreadsheet access OK: " + ss.getName());
-    
-    Logger.log("--- สรุปขั้นตอนถัดไป ---");
-    Logger.log("1. ยืนยันสิทธิ์ในระบบสำเร็จแล้ว");
-    Logger.log("2. กรุณาคลิกที่ปุ่ม 'ทำให้ใช้งานได้' (Deploy) -> 'จัดการการทำให้ใช้งานได้' (Manage Deployments)");
-    Logger.log("3. กดรูปดินสอ (แก้ไข) -> เลือก 'เวอร์ชันใหม่' (New Version)");
-    Logger.log("4. กด 'ทำให้ใช้งานได้' (Deploy) อีกครั้ง เพื่อให้ Web App ได้รับสิทธิ์ที่เพิ่งอนุญาตนี้");
   } catch (e) {
     Logger.log("เกิดข้อผิดพลาดในการขอสิทธิ์: " + e.toString());
   }
@@ -42,7 +35,7 @@ function triggerPermissionCheck() {
 
 function doGet(e) {
   if (!e || !e.parameter || !e.parameter.action) {
-    return ContentService.createTextOutput("LMS Backend is running. Please use via Web App.").setMimeType(ContentService.MimeType.TEXT);
+    return ContentService.createTextOutput("LMS Backend is running.").setMimeType(ContentService.MimeType.TEXT);
   }
 
   const action = e.parameter.action;
@@ -52,20 +45,49 @@ function doGet(e) {
 
   try {
     const ss = SpreadsheetApp.openById(sheetId);
+    
     if (action === 'checkUserStatus') {
       const sheet = ss.getSheetByName('Employ_DB');
       const data = sheet.getDataRange().getValues();
-      const user = data.find(row => row[0] == lineUserId);
-      if (user) return jsonResponse({ success: true, profile: { lineUserId: user[0], staffId: user[1], name: user[2], siteId: user[3], roleType: user[4], position: user[5] } });
-      return jsonResponse({ success: false, message: 'Not linked' });
+      // ค้นหาแถวที่มี LINE User ID ตรงกัน และต้องมี Staff ID ในแถวเดียวกันด้วย
+      const user = data.find(row => row[0] == lineUserId && row[1] != "");
+      
+      if (user) {
+        return jsonResponse({ 
+          success: true, 
+          profile: { 
+            lineUserId: user[0], 
+            staffId: user[1], 
+            name: user[2], 
+            siteId: user[3], 
+            roleType: user[4], 
+            position: user[5] 
+          } 
+        });
+      }
+      return jsonResponse({ success: false, message: 'Not linked or invalid data' });
     }
+
     if (action === 'getProfile') {
       const sheet = ss.getSheetByName('Employ_DB');
       const data = sheet.getDataRange().getValues();
       const user = data.find(row => row[1] == staffId);
-      if (user) return jsonResponse({ success: true, profile: { lineUserId: user[0], staffId: user[1], name: user[2], siteId: user[3], roleType: user[4], position: user[5] } });
+      if (user) {
+        return jsonResponse({ 
+          success: true, 
+          profile: { 
+            lineUserId: user[0], 
+            staffId: user[1], 
+            name: user[2], 
+            siteId: user[3], 
+            roleType: user[4], 
+            position: user[5] 
+          } 
+        });
+      }
       return jsonResponse({ success: false });
     }
+
     if (action === 'getBalances') {
       const sheet = ss.getSheetByName('Leave_Balances');
       const data = sheet.getDataRange().getValues();
@@ -84,6 +106,7 @@ function doGet(e) {
         return jsonResponse({ success: true, data: { balances } });
       }
     }
+
     if (action === 'getRequests' || action === 'getAllRequests') {
       const sheet = ss.getSheetByName('Leave_Requests');
       if (!sheet) return jsonResponse({ success: true, requests: [] });
@@ -97,7 +120,9 @@ function doGet(e) {
       })).reverse();
       return jsonResponse({ success: true, requests: res });
     }
-  } catch (err) { return jsonResponse({ success: false, error: err.toString() }); }
+  } catch (err) { 
+    return jsonResponse({ success: false, error: err.toString() }); 
+  }
 }
 
 function doPost(e) {
@@ -173,8 +198,21 @@ function doPost(e) {
   if (body.action === 'linkLineId') {
     const sheet = ss.getSheetByName('Employ_DB');
     const data = sheet.getDataRange().getValues();
+    
+    // 1. ล้าง LINE User ID นี้ออกจากแถวอื่นๆ ก่อน (ถ้ามี) เพื่อรักษาความถูกต้อง (1 User : 1 Staff)
+    for (let i = 0; i < data.length; i++) {
+      if (data[i][0] == body.lineUserId) {
+        sheet.getRange(i + 1, 1).setValue('');
+      }
+    }
+    
+    // 2. ผูก LINE User ID เข้ากับ Staff ID ที่ระบุ
     const idx = data.findIndex(r => r[1] == body.staffId);
-    if (idx !== -1) { sheet.getRange(idx+1, 1).setValue(body.lineUserId); return jsonResponse({ success: true }); }
+    if (idx !== -1) { 
+      sheet.getRange(idx+1, 1).setValue(body.lineUserId); 
+      return jsonResponse({ success: true }); 
+    }
+    return jsonResponse({ success: false, message: 'Staff ID not found' });
   }
   
   return jsonResponse({ success: false });
