@@ -1,6 +1,6 @@
 
 const TARGET_SHEET_ID = "1q9elvW0_-OkAi8vBwHg38579Z1ozCgeEC27fnLaYBtk";
-const ATTACHMENT_FOLDER_NAME = "LMS_Attachments";
+const ATTACHMENT_FOLDER_ID = "1Or-p8MwFH35PbROikrvjDS3yQ-V6IOGr";
 
 function doGet(e) {
   e = e || { parameter: { action: "testConnection", sheetId: TARGET_SHEET_ID } };
@@ -67,22 +67,17 @@ function doPost(e) {
     const sheet = ss.getSheetByName('Leave_Requests');
     const id = 'REQ-' + Math.random().toString(36).substr(2, 9).toUpperCase();
     
-    // Handle Attachment Upload to Google Drive
+    // Handle Attachment Upload to Google Drive Folder provided by user
     let fileUrl = "";
     if (body.attachment && body.attachment.includes("base64,")) {
       try {
-        let folder;
-        const folders = DriveApp.getFoldersByName(ATTACHMENT_FOLDER_NAME);
-        if (folders.hasNext()) {
-          folder = folders.next();
-        } else {
-          folder = DriveApp.createFolder(ATTACHMENT_FOLDER_NAME);
-        }
+        const folder = DriveApp.getFolderById(ATTACHMENT_FOLDER_ID);
         
         const parts = body.attachment.split(",");
         const mimeType = parts[0].match(/:(.*?);/)[1];
         const base64Data = parts[1];
-        const blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType, id + "_attachment");
+        const fileName = id + "_" + body.staffId + "_attachment";
+        const blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType, fileName);
         const file = folder.createFile(blob);
         file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
         fileUrl = file.getUrl();
