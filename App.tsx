@@ -184,15 +184,15 @@ const DashboardCard: React.FC<{ type: LeaveType; used: number; remain: number }>
   return (
     <div className={`relative overflow-hidden bg-white rounded-xl border-l-4 ${theme.border} shadow-sm transition-all active:scale-95 h-[100px] flex flex-col justify-between p-3`}>
       <div className="relative z-10">
-        <h3 className={`text-[13px] font-[800] uppercase tracking-tight ${theme.text} leading-none mb-1 truncate`}>{theme.label}</h3>
+        <h3 className={`text-[15px] font-[800] uppercase tracking-tight ${theme.text} leading-none mb-1 truncate`}>{theme.label}</h3>
         <div className="flex items-baseline gap-0.5">
           <span className="text-[24px] font-[900] text-slate-800 leading-none">{remain}</span>
-          <span className="text-[11px] font-[600] text-slate-400 uppercase">วัน</span>
+          <span className="text-[13px] font-[600] text-slate-400 uppercase">วัน</span>
         </div>
       </div>
       <div className="mt-auto">
         <div className="flex justify-between items-end mb-1">
-          <span className="text-[11px] font-[600] text-slate-400 uppercase leading-none">ใช้ {used}</span>
+          <span className="text-[12px] font-[600] text-slate-400 uppercase leading-none">ใช้ {used}</span>
           <span className="text-[11px] font-[600] text-slate-300 uppercase leading-none">/ {total}</span>
         </div>
         <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
@@ -455,14 +455,14 @@ const App: React.FC = () => {
 
             <div className="grid grid-cols-3 gap-2.5">
               {balances.length > 0 ? balances.map(b => <DashboardCard key={b.type} type={b.type} used={b.used} remain={b.remain} />) : (
-                <div className="col-span-3 py-8 text-center bg-white/50 border border-dashed rounded-3xl text-[11px] text-slate-300 font-black uppercase tracking-widest">กำลังดึงข้อมูลสิทธิ์การลา...</div>
+                <div className="col-span-3 py-8 text-center bg-white/50 border border-dashed rounded-3xl text-[14px] text-slate-300 font-black uppercase tracking-widest">กำลังดึงข้อมูลสิทธิ์การลา...</div>
               )}
             </div>
 
             <section className="space-y-4">
               <div className="flex items-center justify-between px-1">
-                <h3 className="text-[13px] font-black text-slate-400 uppercase tracking-[0.2em]">รายการลาล่าสุด</h3>
-                <button onClick={() => setView('history')} className="text-[11px] font-black text-blue-500 uppercase tracking-widest hover:underline">ดูทั้งหมด</button>
+                <h3 className="text-[16px] font-black text-slate-400 uppercase tracking-[0.2em]">รายการลาล่าสุด</h3>
+                <button onClick={() => setView('history')} className="text-[13px] font-black text-blue-500 uppercase tracking-widest hover:underline">ดูทั้งหมด</button>
               </div>
               <div className="space-y-3">
                 {myRequests.length > 0 ? (
@@ -472,7 +472,7 @@ const App: React.FC = () => {
                 ) : (
                   <div className="py-12 text-center bg-white/40 border border-dashed rounded-[2.5rem] flex flex-col items-center gap-3">
                     <History size={24} className="text-slate-200" />
-                    <p className="text-[12px] text-slate-300 font-black uppercase tracking-widest">ไม่พบประวัติการลา</p>
+                    <p className="text-[15px] text-slate-300 font-black uppercase tracking-widest">ไม่พบประวัติการลา</p>
                   </div>
                 )}
               </div>
