@@ -38,6 +38,13 @@ const getLeaveTheme = (type: LeaveType) => {
   }
 };
 
+const formatDate = (dateStr: string): string => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return dateStr;
+  return date.toISOString().split('T')[0];
+};
+
 const calculateDays = (start: string, end: string): number => {
   if (!start || !end) return 0;
   const s = new Date(start);
@@ -314,13 +321,13 @@ const App: React.FC = () => {
               <div className="space-y-2">
                 {requests.filter(r => r.staffId === user?.staffId).length > 0 ? (
                   requests.filter(r => r.staffId === user?.staffId).slice(0, 3).map(req => (
-                    <div key={req.id} className="bg-white p-3.5 rounded-2xl border border-slate-50 flex items-center justify-between shadow-sm transition-all hover:bg-slate-50/50">
+                    <div key={req.id} className="bg-white p-3.5 rounded-2xl border border-slate-50 shadow-sm flex items-center justify-between transition-all hover:bg-slate-50/50">
                       <div className="flex items-center gap-3">
                         <div className={`w-1.5 h-1.5 rounded-full ${getLeaveTheme(req.type).color}`} />
                         <div>
                           <h5 className="font-black text-[11px] text-slate-800 leading-tight">{getLeaveTheme(req.type).label}</h5>
                           <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">
-                            {req.startDate} <span className="mx-0.5 text-slate-200">|</span> {req.endDate}
+                            {formatDate(req.startDate)} <span className="mx-0.5 text-slate-200">|</span> {formatDate(req.endDate)}
                           </p>
                         </div>
                       </div>
@@ -368,7 +375,7 @@ const App: React.FC = () => {
                           </div>
                           <div className="flex items-center gap-2 mt-1">
                              <Clock size={10} className="text-slate-500" />
-                             <p className="text-[9px] text-slate-400 font-medium">{req.startDate} — {req.endDate}</p>
+                             <p className="text-[9px] text-slate-400 font-medium">{formatDate(req.startDate)} — {formatDate(req.endDate)}</p>
                              <span className="text-[9px] text-blue-400/80 font-black px-1.5 py-0.5 bg-blue-500/10 rounded">({req.totalDays} วัน)</span>
                           </div>
                         </div>
@@ -475,7 +482,7 @@ const App: React.FC = () => {
                       <StatusBadge status={req.status} />
                     </div>
                     <div className="flex justify-between items-center text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                       <span>{req.startDate} - {req.endDate}</span>
+                       <span>{formatDate(req.startDate)} - {formatDate(req.endDate)}</span>
                        <span className="bg-slate-50 px-2 py-0.5 rounded-md font-black">{req.totalDays} วัน</span>
                     </div>
                   </div>
