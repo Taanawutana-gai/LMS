@@ -464,8 +464,7 @@ const App: React.FC = () => {
         {view === 'approval' && isEligibleManager && (
           <div className="space-y-6 animate-in slide-in-from-right-10 duration-500">
              <header className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-xl"><ShieldCheck size={24} /></div>
-              {/* Removed "รายการรออนุมัติ" and "Site Scope" */}
+              {/* Shield icon and site scope display removed as per user request */}
             </header>
             <section className="bg-slate-900 p-6 rounded-[2.5rem] shadow-2xl text-white space-y-6 min-h-[450px] border border-white/5">
               <div className="flex items-center justify-between">
