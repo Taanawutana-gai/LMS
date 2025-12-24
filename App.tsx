@@ -4,7 +4,8 @@ import {
   Calendar, Home, PlusCircle, User, ShieldCheck, Clock, X, 
   ChevronLeft, Loader2, RefreshCcw, History, AlertCircle, 
   CheckCircle2, FileText, LogOut, Search, MapPin, Hash, UserCircle,
-  Key, ScanFace, AlertTriangle, CheckSquare, Camera, Trash2, RotateCcw
+  Key, ScanFace, AlertTriangle, CheckSquare, Camera, Trash2, RotateCcw,
+  Info
 } from 'lucide-react';
 import { 
   UserRole, LeaveType, LeaveStatus, LeaveRequest, LeaveBalance, UserProfile 
@@ -73,7 +74,6 @@ const RequestCard: React.FC<{
   const isPending = currentStatus === 'pending';
   const isRejected = currentStatus === 'rejected';
 
-  // ปรับขนาดฟอนต์ตามมุมมอง - หน้า Approval (ManagerView) ต้องไม่เกิน 14px
   const labelSize = isDashboardView ? 'text-[16px]' : (isManagerView ? 'text-[14px]' : (isHistoryView ? 'text-[18px]' : 'text-[11px]'));
   const detailSize = isDashboardView ? 'text-[13px]' : (isManagerView ? 'text-[14px]' : (isHistoryView ? 'text-[14px]' : 'text-[9px]'));
   const subLabelSize = isManagerView ? 'text-[14px]' : 'text-[9px]';
@@ -328,6 +328,14 @@ const App: React.FC = () => {
     const days = calculateDays(newReq.startDate, newReq.endDate);
     if (days <= 0) { alert('วันที่ไม่ถูกต้อง'); return; }
     if (!newReq.reason) { alert('กรุณาระบุเหตุผล'); return; }
+    
+    // Final check for summary validity
+    const summary = getSmartSummary();
+    if (summary && !summary.isValid) {
+      alert('ข้อมูลการลายังไม่เป็นไปตามเงื่อนไข กรุณาตรวจสอบสิทธิคงเหลือหรือกำหนดการลาล่วงหน้า');
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await SheetService.submitRequest({
@@ -343,6 +351,40 @@ const App: React.FC = () => {
     setLoading(false);
   };
 
+  // --- Smart Summary Logic ---
+  const getSmartSummary = () => {
+    if (!newReq.startDate || !newReq.endDate) return null;
+
+    const totalDays = calculateDays(newReq.startDate, newReq.endDate);
+    const balance = balances.find(b => b.type === newReq.type);
+    const remain = balance?.remain || 0;
+    
+    // SLA Checks
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const start = new Date(newReq.startDate);
+    const diffTime = start.getTime() - today.getTime();
+    const advanceDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    let slaRule = 0;
+    if (newReq.type === LeaveType.ANNUAL) slaRule = 5;
+    if (newReq.type === LeaveType.PERSONAL || newReq.type === LeaveType.WEEKLY_HOLIDAY_SWITCH) slaRule = 3;
+
+    const isBalanceOk = totalDays <= remain;
+    const isSlaOk = advanceDays >= slaRule;
+    const isValid = isBalanceOk && isSlaOk;
+
+    return {
+      totalDays,
+      remain,
+      advanceDays,
+      slaRule,
+      isBalanceOk,
+      isSlaOk,
+      isValid
+    };
+  };
+
   const isEligibleManager = checkIsManager(user?.roleType);
   const myStaffId = String(user?.staffId || '').trim().toLowerCase();
   const mySiteId = String(user?.siteId || '').trim().toLowerCase();
@@ -351,6 +393,8 @@ const App: React.FC = () => {
     const rStatus = String(r.status || '').toLowerCase().trim();
     return rStatus === 'pending' && String(r.staffId || '').trim().toLowerCase() !== myStaffId && String(r.siteId || '').trim().toLowerCase() === mySiteId;
   });
+
+  const smartSummary = getSmartSummary();
 
   if (!isLoggedIn) return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center font-sans">
@@ -516,6 +560,53 @@ const App: React.FC = () => {
                   <input type="date" value={newReq.endDate} onChange={e => setNewReq({...newReq, endDate:e.target.value})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-[14px] ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500" />
                 </div>
               </div>
+
+              {/* Smart Summary - Online Check */}
+              {smartSummary && (
+                <div className={`p-4 rounded-2xl border-2 animate-in fade-in slide-in-from-top-2 duration-500 space-y-3 ${smartSummary.isValid ? 'bg-blue-50/50 border-blue-100' : 'bg-rose-50 border-rose-200'}`}>
+                  <div className="flex items-center justify-between border-b pb-2 border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${smartSummary.isValid ? 'bg-blue-500 text-white' : 'bg-rose-500 text-white shadow-lg shadow-rose-200'}`}>
+                        {smartSummary.isValid ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+                      </div>
+                      <span className={`text-[14px] font-black uppercase ${smartSummary.isValid ? 'text-blue-600' : 'text-rose-600'}`}>แจ้งสรุปผลการตรวจสอบ</span>
+                    </div>
+                    {!smartSummary.isValid && <span className="text-[11px] font-bold bg-rose-500 text-white px-2 py-0.5 rounded-full animate-pulse">Warning!</span>}
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <p className="text-[12px] font-bold text-slate-400 uppercase">จำนวนวันที่ใช้</p>
+                      <p className="text-[14px] font-black text-slate-800">{smartSummary.totalDays} วัน</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[12px] font-bold text-slate-400 uppercase">สิทธิคงเหลือ</p>
+                      <p className={`text-[14px] font-black ${smartSummary.isBalanceOk ? 'text-slate-800' : 'text-rose-600'}`}>
+                        {smartSummary.remain} วัน {smartSummary.isBalanceOk ? '' : '(ไม่พอ!)'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      {smartSummary.isBalanceOk ? <CheckCircle2 size={14} className="text-emerald-500" /> : <X size={14} className="text-rose-500" />}
+                      <span className="text-[14px] font-bold text-slate-600">
+                        {smartSummary.isBalanceOk ? 'ยอดคงเหลือเพียงพอต่อการลา' : 'สิทธิการลาประเภทนี้ไม่เพียงพอ'}
+                      </span>
+                    </div>
+                    
+                    {smartSummary.slaRule > 0 && (
+                      <div className="flex items-center gap-2">
+                        {smartSummary.isSlaOk ? <CheckCircle2 size={14} className="text-emerald-500" /> : <AlertCircle size={14} className="text-rose-500" />}
+                        <span className="text-[14px] font-bold text-slate-600">
+                          {smartSummary.isSlaOk ? `ลาล่วงหน้าตามกำหนด (${smartSummary.advanceDays} วัน)` : `ต้องลาล่วงหน้าอย่างน้อย ${smartSummary.slaRule} วัน`}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <label className="text-[14px] font-black text-slate-400 uppercase tracking-widest">เหตุผลการลา</label>
                 <textarea value={newReq.reason} onChange={e => setNewReq({...newReq, reason:e.target.value})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-[14px] h-24 resize-none ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500" placeholder="ระบุเหตุผล..." />
@@ -527,7 +618,11 @@ const App: React.FC = () => {
                    {newReq.attachment ? <img src={newReq.attachment} className="w-full h-full object-cover" /> : <Camera size={24} className="text-slate-300" />}
                  </div>
               </div>
-              <button onClick={handleSubmit} disabled={loading} className="w-full bg-blue-600 text-white font-black py-5 rounded-3xl shadow-xl active:scale-95 transition-all text-[14px] uppercase tracking-widest">
+              <button 
+                onClick={handleSubmit} 
+                disabled={loading || (smartSummary !== null && !smartSummary.isValid)} 
+                className={`w-full text-white font-black py-5 rounded-3xl shadow-xl active:scale-95 transition-all text-[14px] uppercase tracking-widest flex items-center justify-center gap-2 ${loading || (smartSummary !== null && !smartSummary.isValid) ? 'bg-slate-300 cursor-not-allowed shadow-none' : 'bg-blue-600'}`}
+              >
                 {loading ? <Loader2 className="animate-spin" /> : "ส่งใบลา"}
               </button>
             </div>
