@@ -73,9 +73,11 @@ const RequestCard: React.FC<{
   const isPending = currentStatus === 'pending';
   const isRejected = currentStatus === 'rejected';
 
-  // ขนาดฟอนต์แยกตามมุมมอง
-  const labelSize = isDashboardView ? 'text-[16px]' : (isHistoryView ? 'text-[18px]' : 'text-[11px]');
-  const detailSize = isDashboardView ? 'text-[13px]' : (isHistoryView ? 'text-[14px]' : 'text-[9px]');
+  // ปรับขนาดฟอนต์ตามมุมมอง - ปรับให้หน้า Approval (ManagerView) ใหญ่ขึ้น
+  const labelSize = isDashboardView ? 'text-[16px]' : (isHistoryView || isManagerView ? 'text-[18px]' : 'text-[11px]');
+  const detailSize = isDashboardView ? 'text-[13px]' : (isHistoryView || isManagerView ? 'text-[14px]' : 'text-[9px]');
+  const subLabelSize = isManagerView ? 'text-[14px]' : 'text-[9px]';
+  const siteTagSize = isManagerView ? 'text-[11px]' : 'text-[7px]';
 
   return (
     <div className={`relative overflow-hidden p-4 rounded-2xl border transition-all ${isManagerView ? 'bg-white/5 border-white/5 shadow-inner' : 'bg-white border-slate-50 shadow-sm'} space-y-3`}>
@@ -87,12 +89,12 @@ const RequestCard: React.FC<{
           <div>
             {isManagerView && (
               <div className="flex items-center gap-1.5 mb-1">
-                <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest leading-none">{req.staffName}</span>
-                <span className="text-[7px] font-bold text-slate-500 bg-white/5 px-1 rounded uppercase">{req.siteId}</span>
+                <span className={`${subLabelSize} font-black text-blue-400 uppercase tracking-widest leading-none`}>{req.staffName}</span>
+                <span className={`${siteTagSize} font-bold text-slate-500 bg-white/5 px-1 rounded uppercase`}>{req.siteId}</span>
               </div>
             )}
             <h5 className={`font-black ${labelSize} leading-tight ${isManagerView ? 'text-white' : 'text-slate-800'}`}>{theme.label}</h5>
-            <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">
+            <p className={`${isManagerView ? 'text-[11px]' : 'text-[8px]'} text-slate-400 font-bold uppercase tracking-tight mt-0.5`}>
               {formatDate(req.startDate)} <span className="mx-0.5 text-slate-200">|</span> {formatDate(req.endDate)}
             </p>
           </div>
@@ -120,7 +122,7 @@ const RequestCard: React.FC<{
 
       {isRejected && req.approverReason && !isDashboardView && (
         <div className="bg-rose-500/10 p-2 rounded-lg border border-rose-500/20">
-           <p className="text-[8px] font-black text-rose-500 uppercase mb-0.5">Note from Approver:</p>
+           <p className={`${isManagerView ? 'text-[11px]' : 'text-[8px]'} font-black text-rose-500 uppercase mb-0.5`}>Note from Approver:</p>
            <p className={`${detailSize} text-rose-400 leading-tight italic`}>"{req.approverReason}"</p>
         </div>
       )}
@@ -154,13 +156,13 @@ const RequestCard: React.FC<{
                     value={rejectReason}
                     onChange={(e) => setRejectReason(e.target.value)}
                     placeholder="ระบุเหตุผลการปฏิเสธ..."
-                    className="w-full bg-white/10 border border-white/20 rounded-xl p-2 text-[10px] text-white outline-none focus:border-rose-500/50 h-16 resize-none"
+                    className="w-full bg-white/10 border border-white/20 rounded-xl p-2 text-[12px] text-white outline-none focus:border-rose-500/50 h-16 resize-none"
                    />
                    <div className="flex gap-2">
                      <button 
                       disabled={!rejectReason.trim()}
                       onClick={() => onAction(req.id, LeaveStatus.REJECTED, rejectReason)}
-                      className="flex-1 bg-rose-600 text-white py-2 rounded-lg text-[9px] font-black uppercase active:scale-95 transition-all"
+                      className="flex-1 bg-rose-600 text-white py-2.5 rounded-lg text-[14px] font-black uppercase active:scale-95 transition-all"
                      >
                        Confirm Reject
                      </button>
@@ -169,8 +171,8 @@ const RequestCard: React.FC<{
                 </div>
               ) : (
                 <div className="flex gap-2 animate-in fade-in duration-300">
-                  <button onClick={() => onAction(req.id, LeaveStatus.APPROVED)} className="flex-1 bg-blue-600 text-white py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg shadow-blue-600/20 active:scale-95 transition-all">Approve</button>
-                  <button onClick={() => setShowRejectInput(true)} className="flex-1 bg-white/10 text-white py-2.5 rounded-xl text-[9px] font-black uppercase border border-white/10 active:scale-95 transition-all">Reject</button>
+                  <button onClick={() => onAction(req.id, LeaveStatus.APPROVED)} className="flex-1 bg-blue-600 text-white py-3 rounded-xl text-[14px] font-black uppercase shadow-lg shadow-blue-600/20 active:scale-95 transition-all">Approve</button>
+                  <button onClick={() => setShowRejectInput(true)} className="flex-1 bg-white/10 text-white py-3 rounded-xl text-[14px] font-black uppercase border border-white/10 active:scale-95 transition-all">Reject</button>
                 </div>
               )}
            </div>
@@ -422,7 +424,7 @@ const App: React.FC = () => {
 
             <section className="space-y-4">
               <div className="flex items-center justify-between px-1">
-                <h3 className="text-[18px] font-black text-slate-400 uppercase tracking-[0.2em]">รายการลาล่าสุด</h3>
+                <h3 className="text-[14px] font-black text-slate-400 uppercase tracking-[0.2em]">รายการลาล่าสุด</h3>
                 <button onClick={() => setView('history')} className="text-[14px] font-black text-blue-500 uppercase tracking-widest hover:underline">ดูทั้งหมด</button>
               </div>
               <div className="space-y-3">
@@ -460,18 +462,28 @@ const App: React.FC = () => {
         )}
 
         {view === 'approval' && isEligibleManager && (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-in slide-in-from-right-10 duration-500">
              <header className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-xl"><ShieldCheck size={20} /></div>
-              <div><h2 className="text-lg font-black text-slate-800 tracking-tight leading-none">รายการรออนุมัติ</h2><p className="text-[8px] font-black text-blue-500 uppercase tracking-widest mt-1">Site Scope: {user?.siteId}</p></div>
+              <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-xl"><ShieldCheck size={24} /></div>
+              <div>
+                <h2 className="text-[20px] font-black text-slate-800 tracking-tight leading-none">รายการรออนุมัติ</h2>
+                <p className="text-[11px] font-black text-blue-500 uppercase tracking-widest mt-1">Site Scope: {user?.siteId}</p>
+              </div>
             </header>
             <section className="bg-slate-900 p-6 rounded-[2.5rem] shadow-2xl text-white space-y-6 min-h-[450px] border border-white/5">
-              <div className="flex items-center justify-between"><h3 className="font-black text-[9px] uppercase tracking-[0.3em] text-slate-400">Team Pending</h3><span className="px-2.5 py-1 bg-blue-600 rounded-full text-[9px] font-black uppercase tracking-widest">{teamPending.length} รายการ</span></div>
+              <div className="flex items-center justify-between">
+                <h3 className="font-black text-[11px] uppercase tracking-[0.3em] text-slate-400">Team Pending</h3>
+                <span className="px-3 py-1 bg-blue-600 rounded-full text-[11px] font-black uppercase tracking-widest">{teamPending.length} รายการ</span>
+              </div>
               <div className="space-y-4">
-                {teamPending.length > 0 ? teamPending.map(req => (<RequestCard key={req.id} req={req} user={user} isManagerView onViewImage={setZoomImg} onAction={handleAction} />)) : (
+                {teamPending.length > 0 ? (
+                  teamPending.map(req => (
+                    <RequestCard key={req.id} req={req} user={user} isManagerView onViewImage={setZoomImg} onAction={handleAction} />
+                  ))
+                ) : (
                   <div className="py-24 text-center border border-dashed border-white/10 rounded-3xl flex flex-col items-center gap-4">
-                    <CheckCircle2 size={24} className="text-slate-500" />
-                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">ไม่มีรายการค้างพิจารณา</p>
+                    <CheckCircle2 size={32} className="text-slate-500" />
+                    <p className="text-[16px] font-black text-slate-300 uppercase tracking-widest">ไม่มีรายการค้างพิจารณา</p>
                   </div>
                 )}
               </div>
