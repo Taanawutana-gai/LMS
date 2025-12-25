@@ -5,7 +5,7 @@ import {
   ChevronLeft, Loader2, RefreshCcw, History, AlertCircle, 
   CheckCircle2, FileText, LogOut, Search, MapPin, Hash, UserCircle,
   Key, ScanFace, AlertTriangle, CheckSquare, Camera, Trash2, RotateCcw,
-  Info
+  Info, Lock
 } from 'lucide-react';
 import { 
   UserRole, LeaveType, LeaveStatus, LeaveRequest, LeaveBalance, UserProfile 
@@ -274,25 +274,17 @@ const App: React.FC = () => {
     if (!sid) { setLoginError('กรุณากรอกรหัสพนักงาน'); return; }
     setLoading(true);
     try {
-      const p = await SheetService.getProfile(sid);
-      if (!p) {
-        setLoginError('ไม่พบรหัสพนักงานนี้ในระบบ');
-        setLoading(false);
-        return;
+      const result = await SheetService.loginUser(sid, userIdInput);
+      if (result.success && result.profile) {
+        setUser(result.profile);
+        fetchData(result.profile);
+        setIsLoggedIn(true);
+      } else {
+        setLoginError(result.message || 'รหัสพนักงานไม่ถูกต้อง หรือเชื่อมต่อไม่ได้');
       }
-
-      if (p.lineUserId && p.lineUserId.trim() !== "" && p.lineUserId !== userIdInput) {
-        setLoginError('ขออภัย รหัสพนักงานนี้ถูกลงทะเบียนด้วยบัญชีอื่นแล้ว');
-        setLoading(false);
-        return;
-      }
-
-      await SheetService.linkLineId(sid, userIdInput);
-      const updatedUser = { ...p, lineUserId: userIdInput };
-      setUser(updatedUser);
-      fetchData(updatedUser);
-      setIsLoggedIn(true);
-    } catch (e) { setLoginError('เกิดข้อผิดพลาดในการเชื่อมต่อ'); }
+    } catch (e) { 
+      setLoginError('เกิดข้อผิดพลาดในการเชื่อมต่อ'); 
+    }
     setLoading(false);
   };
 
@@ -409,34 +401,69 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center font-sans">
       <div className="w-full max-sm glass-card rounded-[3rem] shadow-2xl p-8 border border-white/40">
         <div className="bg-white/50 rounded-[2.5rem] p-8 flex flex-col items-center gap-6">
-          <div className="w-20 h-20 rounded-3xl overflow-hidden border-4 border-white shadow-xl bg-slate-100 flex items-center justify-center">
-            {linePicture ? <img src={linePicture} className="w-full h-full object-cover" /> : <UserCircle size={64} className="text-slate-200" />}
+          <div className="relative">
+            <div className="w-20 h-20 rounded-3xl overflow-hidden border-4 border-white shadow-xl bg-slate-100 flex items-center justify-center">
+              {linePicture ? <img src={linePicture} className="w-full h-full object-cover" /> : <UserCircle size={64} className="text-slate-200" />}
+            </div>
+            <div className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-1.5 rounded-xl shadow-lg border-2 border-white">
+              <ShieldCheck size={14} />
+            </div>
           </div>
           <div>
-            <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">LMS</p>
+            <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">LMS AUTH</p>
             <h2 className="text-xl font-black text-slate-800 tracking-tight">{lineName || 'LINE User'}</h2>
           </div>
-          <div className="w-full space-y-4 text-left">
+          <div className="w-full space-y-5 text-left">
             <div className="space-y-1.5">
-               <label className="text-[9px] font-black text-slate-400 uppercase ml-1">User ID</label>
-               <div className="flex items-center gap-2 w-full bg-slate-50/80 text-slate-400 px-4 py-3 rounded-2xl font-bold text-[9px] ring-1 ring-slate-100/50">
-                  <Key size={12} className="text-blue-400" />
-                  <span className="truncate">{userIdInput}</span>
+               <label className="text-[10px] font-black text-slate-400 uppercase ml-1 flex items-center gap-1.5">
+                 <Key size={12} className="text-blue-500" />
+                 LINE User ID
+               </label>
+               <div className="flex items-center gap-2 w-full bg-slate-100/80 text-slate-500 px-4 py-3 rounded-2xl font-bold text-[10px] border border-slate-200/50 cursor-not-allowed">
+                  <span className="truncate">{userIdInput || 'กำลังดึงข้อมูล...'}</span>
                </div>
             </div>
             <div className="space-y-1.5">
-               <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Staff ID</label>
+               <label className="text-[10px] font-black text-slate-400 uppercase ml-1 flex items-center gap-1.5">
+                 <Lock size={12} className="text-blue-500" />
+                 Staff ID (รหัสพนักงาน)
+               </label>
                <div className="relative">
-                 <Hash size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                 <input value={staffIdInput} onChange={e => setStaffIdInput(e.target.value)} className="w-full bg-white pl-10 pr-4 py-4 rounded-2xl font-bold ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm transition-all" placeholder="ป้อนรหัสพนักงาน" />
+                 <Hash size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                 <input 
+                  type="text"
+                  value={staffIdInput} 
+                  onChange={e => setStaffIdInput(e.target.value)} 
+                  className="w-full bg-white pl-10 pr-4 py-4 rounded-2xl font-bold ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm transition-all text-slate-800 placeholder:text-slate-300" 
+                  placeholder="กรอกรหัสพนักงานเพื่อเข้าสู่ระบบ" 
+                 />
                </div>
             </div>
-            {loginError && <div className="flex items-center gap-2 justify-center bg-rose-50 p-2 rounded-xl"><AlertCircle size={12} className="text-rose-500" /><p className="text-[9px] font-bold text-rose-600">{loginError}</p></div>}
-            <button onClick={handleLogin} disabled={loading} className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs disabled:opacity-50">
-              {loading ? <Loader2 className="animate-spin" /> : <><ScanFace size={16} /> Login to System</>}
+            {loginError && (
+              <div className="flex items-center gap-2 justify-center bg-rose-50 border border-rose-100 p-3 rounded-2xl animate-in fade-in zoom-in duration-300">
+                <AlertCircle size={14} className="text-rose-500 shrink-0" />
+                <p className="text-[10px] font-bold text-rose-600">{loginError}</p>
+              </div>
+            )}
+            <button 
+              onClick={handleLogin} 
+              disabled={loading || !userIdInput} 
+              className="w-full bg-blue-600 text-white font-black py-4.5 rounded-2xl shadow-xl shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs disabled:opacity-50 h-[56px]"
+            >
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="animate-spin" size={18} />
+                  <span>กำลังยืนยันตัวตน...</span>
+                </div>
+              ) : (
+                <><ScanFace size={18} /> เข้าสู่ระบบ</>
+              )}
             </button>
           </div>
-          <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">SMC Property Soft</p>
+          <div className="pt-2 border-t border-slate-100 w-full flex flex-col items-center gap-1">
+            <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">SMC Property Soft v2.0</p>
+            <p className="text-[7px] text-slate-300">Powered by LIFF & Google Workspace</p>
+          </div>
         </div>
       </div>
     </div>
@@ -523,8 +550,6 @@ const App: React.FC = () => {
 
         {view === 'approval' && isEligibleManager && (
           <div className="space-y-6 animate-in slide-in-from-right-10 duration-500">
-             <header className="flex items-center gap-3">
-            </header>
             <section className="bg-slate-900 p-6 rounded-[2.5rem] shadow-2xl text-white space-y-6 min-h-[450px] border border-white/5">
               <div className="flex items-center justify-between">
                 <h3 className="font-black text-[11px] uppercase tracking-[0.3em] text-slate-400">Team Pending</h3>
@@ -579,7 +604,6 @@ const App: React.FC = () => {
                       </div>
                       <span className={`text-[14px] font-black uppercase ${smartSummary.isValid ? 'text-blue-600' : 'text-rose-600'}`}>แจ้งสรุปผลการตรวจสอบ</span>
                     </div>
-                    {!smartSummary.isValid && <span className="text-[11px] font-bold bg-rose-500 text-white px-2 py-0.5 rounded-full animate-pulse">Warning!</span>}
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
@@ -595,31 +619,6 @@ const App: React.FC = () => {
                         {smartSummary.remain} วัน {smartSummary.isBalanceOk ? '' : '(ไม่พอ!)'}
                       </p>
                     </div>
-                  </div>
-
-                  <div className="pt-2 flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      {smartSummary.isDateRangeValid ? <CheckCircle2 size={14} className="text-emerald-500" /> : <AlertCircle size={14} className="text-rose-500" />}
-                      <span className="text-[14px] font-bold text-slate-600">
-                        {smartSummary.isDateRangeValid ? 'ช่วงวันที่ระบุถูกต้อง' : 'ห้ามวันสิ้นสุดน้อยกว่าวันเริ่มต้น'}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {smartSummary.isBalanceOk ? <CheckCircle2 size={14} className="text-emerald-500" /> : <X size={14} className="text-rose-500" />}
-                      <span className="text-[14px] font-bold text-slate-600">
-                        {smartSummary.isBalanceOk ? 'ยอดคงเหลือเพียงพอต่อการลา' : 'สิทธิการลาประเภทนี้ไม่เพียงพอ'}
-                      </span>
-                    </div>
-                    
-                    {smartSummary.slaRule > 0 && (
-                      <div className="flex items-center gap-2">
-                        {smartSummary.isSlaOk ? <CheckCircle2 size={14} className="text-emerald-500" /> : <AlertCircle size={14} className="text-rose-500" />}
-                        <span className="text-[14px] font-bold text-slate-600">
-                          {smartSummary.isSlaOk ? `ลาล่วงหน้าตามกำหนด (${smartSummary.advanceDays} วัน)` : `ต้องลาล่วงหน้าอย่างน้อย ${smartSummary.slaRule} วัน`}
-                        </span>
-                      </div>
-                    )}
                   </div>
                 </div>
               )}

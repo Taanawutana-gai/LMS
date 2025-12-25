@@ -2,22 +2,9 @@
 import { UserProfile, LeaveRequest, RawLeaveBalance, LeaveStatus } from './types.ts';
 
 const SHEET_ID = '1q9elvW0_-OkAi8vBwHg38579Z1ozCgeEC27fnLaYBtk';
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwOXGUZHHpqVk5t6loJKpDUL81n0WzjZ52fklFAkVTDv1QNey_LH-DxVt0qmklhnyepLg/exec'; 
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwTm4-qVGb22kmjkx_AUalJ0pzaznWdHQeurESyfMDbJipXlypx4bGixne9qu07jcRpSg/exec'; 
 
 export const SheetService = {
-  async testConnection(): Promise<any> {
-    try {
-      const url = `${SCRIPT_URL}?action=testConnection&sheetId=${SHEET_ID}`;
-      console.log('Fetching:', url);
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
-      return await response.json();
-    } catch (error: any) {
-      console.error('Connection Error:', error);
-      return { success: false, message: error.message };
-    }
-  },
-
   async checkUserStatus(lineUserId: string): Promise<UserProfile | null> {
     try {
       const response = await fetch(`${SCRIPT_URL}?action=checkUserStatus&lineUserId=${lineUserId}&sheetId=${SHEET_ID}`);
@@ -29,30 +16,23 @@ export const SheetService = {
     }
   },
 
-  async getProfile(staffId: string): Promise<UserProfile | null> {
-    try {
-      const response = await fetch(`${SCRIPT_URL}?action=getProfile&staffId=${staffId}&sheetId=${SHEET_ID}`);
-      const data = await response.json();
-      return data.success ? data.profile : null;
-    } catch (error) {
-      console.error('GetProfile Error:', error);
-      throw error;
-    }
-  },
-
-  async linkLineId(staffId: string, lineUserId: string): Promise<boolean> {
+  async loginUser(staffId: string, lineUserId: string): Promise<{ success: boolean; message?: string; profile?: UserProfile }> {
     try {
       const response = await fetch(SCRIPT_URL, {
         method: 'POST',
         redirect: 'follow',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'linkLineId', sheetId: SHEET_ID, staffId, lineUserId })
+        body: JSON.stringify({ 
+          action: 'LOGIN_USER', 
+          sheetId: SHEET_ID, 
+          staffId, 
+          lineUserId 
+        })
       });
-      const data = await response.json();
-      return data.success;
+      return await response.json();
     } catch (error) {
-      console.error('LinkLineId Error:', error);
-      return false;
+      console.error('Login Error:', error);
+      return { success: false, message: 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์' };
     }
   },
 
@@ -69,7 +49,6 @@ export const SheetService = {
 
   async getRequests(staffId?: string, isManager?: boolean): Promise<LeaveRequest[]> {
     try {
-      // Ensure staffId is sent even for managers for logging/tracking purposes
       const actionParam = isManager ? 'action=getAllRequests' : 'action=getRequests';
       const staffIdParam = staffId ? `&staffId=${staffId}` : '';
       const response = await fetch(`${SCRIPT_URL}?${actionParam}${staffIdParam}&sheetId=${SHEET_ID}`);
