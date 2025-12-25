@@ -22,9 +22,10 @@ function doGet(e) {
     if (action === 'checkUserStatus') {
       const sheet = ss.getSheetByName('Employ_DB');
       const data = sheet.getDataRange().getValues();
-      const user = data.find(row => row[0] == lineUserId && row[1] != "");
+      // ค้นหาแถวที่มี LINE User ID ตรงกัน (อ้างอิงตามตัวอย่าง: username = row[0])
+      const user = data.find(row => String(row[0]).trim() === String(lineUserId).trim());
       
-      if (user) {
+      if (user && user[1] != "") {
         return jsonResponse({ 
           success: true, 
           profile: { 
@@ -43,7 +44,7 @@ function doGet(e) {
     if (action === 'getBalances') {
       const sheet = ss.getSheetByName('Leave_Balances');
       const data = sheet.getDataRange().getValues();
-      const row = data.find(r => r[0] == staffId);
+      const row = data.find(r => String(r[0]).trim() === String(staffId).trim());
       if (row) {
         const balances = [
           { type: 'ลาพักร้อน (Annual Leave)', used: row[3], remain: row[4] },
@@ -64,7 +65,7 @@ function doGet(e) {
       if (!sheet) return jsonResponse({ success: true, requests: [] });
       const data = sheet.getDataRange().getValues();
       data.shift();
-      let filtered = (action === 'getAllRequests') ? data : data.filter(r => r[2] == staffId);
+      let filtered = (action === 'getAllRequests') ? data : data.filter(r => String(r[2]).trim() === String(staffId).trim());
       const res = filtered.map(r => ({
         appliedDate: r[0], id: r[1], staffId: r[2], staffName: r[3], siteId: r[4],
         type: r[5], startDate: r[6], endDate: r[7], totalDays: r[8], reason: r[9],
@@ -94,34 +95,47 @@ function doPost(e) {
   if (body.action === 'LOGIN_USER') {
     const sheet = ss.getSheetByName('Employ_DB');
     const data = sheet.getDataRange().getValues();
-    const idx = data.findIndex(r => r[1] == body.staffId);
     
-    if (idx === -1) {
+    const inputStaffId = String(body.staffId).trim();
+    const inputLineUserId = String(body.lineUserId).trim();
+
+    // 1. ค้นหาแถวโดย Staff ID ก่อน (ใช้เป็น Password ในบริบทนี้)
+    const staffIdx = data.findIndex(row => String(row[1]).trim() === inputStaffId);
+    
+    if (staffIdx === -1) {
       return jsonResponse({ success: false, message: 'รหัสพนักงานไม่ถูกต้อง' });
     }
 
-    const row = data[idx];
-    const existingLineId = row[0];
+    const targetRow = data[staffIdx];
+    const existingLineIdOnRow = String(targetRow[0]).trim();
 
-    // ถ้ามีการผูกบัญชีอยู่แล้วและไม่ตรงกับ LINE ปัจจุบัน
-    if (existingLineId && existingLineId != body.lineUserId) {
+    // 2. ตรวจสอบว่า Staff ID นี้ถูกผูกกับ LINE ID อื่นไปแล้วหรือยัง (Verification Logic)
+    if (existingLineIdOnRow !== "" && existingLineIdOnRow !== inputLineUserId) {
       return jsonResponse({ success: false, message: 'รหัสพนักงานนี้ถูกลงทะเบียนด้วยบัญชีอื่นแล้ว' });
     }
 
-    // ถ้ายังไม่มีการผูกบัญชี ให้ผูกทันที
-    if (!existingLineId) {
-      sheet.getRange(idx + 1, 1).setValue(body.lineUserId);
+    // 3. ตรวจสอบว่า LINE ID ปัจจุบัน เคยไปผูกกับ Staff ID อื่นหรือไม่
+    const otherStaffIdx = data.findIndex((row, idx) => 
+      idx !== staffIdx && String(row[0]).trim() === inputLineUserId
+    );
+    if (otherStaffIdx !== -1) {
+      return jsonResponse({ success: false, message: 'บัญชี LINE นี้ถูกผูกไว้กับรหัสพนักงานอื่นแล้ว' });
+    }
+
+    // 4. ผ่านเงื่อนไขทั้งหมด: ทำการผูก ID (ถ้ายังไม่มี) และส่งข้อมูลกลับ
+    if (existingLineIdOnRow === "") {
+      sheet.getRange(staffIdx + 1, 1).setValue(inputLineUserId);
     }
 
     return jsonResponse({
       success: true,
       profile: {
-        lineUserId: body.lineUserId,
-        staffId: row[1],
-        name: row[2],
-        siteId: row[3],
-        roleType: row[4],
-        position: row[5]
+        lineUserId: inputLineUserId,
+        staffId: targetRow[1],
+        name: targetRow[2],
+        siteId: targetRow[3],
+        roleType: targetRow[4],
+        position: targetRow[5]
       }
     });
   }
@@ -176,7 +190,7 @@ function updateBalances(ss, req, status) {
   const days = parseFloat(req[8]);
   const sheet = ss.getSheetByName('Leave_Balances');
   const data = sheet.getDataRange().getValues();
-  const idx = data.findIndex(r => r[0] == staffId);
+  const idx = data.findIndex(r => String(r[0]).trim() === String(staffId).trim());
   if (idx === -1) return;
   const row = idx + 1;
 

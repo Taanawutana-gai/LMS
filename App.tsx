@@ -410,23 +410,23 @@ const App: React.FC = () => {
             </div>
           </div>
           <div>
-            <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">LMS AUTH</p>
+            <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">LMS AUTHENTICATION</p>
             <h2 className="text-xl font-black text-slate-800 tracking-tight">{lineName || 'LINE User'}</h2>
           </div>
           <div className="w-full space-y-5 text-left">
             <div className="space-y-1.5">
                <label className="text-[10px] font-black text-slate-400 uppercase ml-1 flex items-center gap-1.5">
                  <Key size={12} className="text-blue-500" />
-                 LINE User ID
+                 LINE User ID (ระบบดึงให้อัตโนมัติ)
                </label>
-               <div className="flex items-center gap-2 w-full bg-slate-100/80 text-slate-500 px-4 py-3 rounded-2xl font-bold text-[10px] border border-slate-200/50 cursor-not-allowed">
-                  <span className="truncate">{userIdInput || 'กำลังดึงข้อมูล...'}</span>
+               <div className="flex items-center gap-2 w-full bg-slate-100/80 text-slate-500 px-4 py-3 rounded-2xl font-bold text-[10px] border border-slate-200/50 cursor-not-allowed select-none">
+                  <span className="truncate">{userIdInput || 'กำลังรอรับข้อมูลจาก LIFF...'}</span>
                </div>
             </div>
             <div className="space-y-1.5">
                <label className="text-[10px] font-black text-slate-400 uppercase ml-1 flex items-center gap-1.5">
                  <Lock size={12} className="text-blue-500" />
-                 Staff ID (รหัสพนักงาน)
+                 Staff ID (ใช้เป็นรหัสผ่าน)
                </label>
                <div className="relative">
                  <Hash size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
@@ -435,7 +435,7 @@ const App: React.FC = () => {
                   value={staffIdInput} 
                   onChange={e => setStaffIdInput(e.target.value)} 
                   className="w-full bg-white pl-10 pr-4 py-4 rounded-2xl font-bold ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm transition-all text-slate-800 placeholder:text-slate-300" 
-                  placeholder="กรอกรหัสพนักงานเพื่อเข้าสู่ระบบ" 
+                  placeholder="ป้อนรหัสพนักงานของท่าน" 
                  />
                </div>
             </div>
@@ -453,16 +453,16 @@ const App: React.FC = () => {
               {loading ? (
                 <div className="flex items-center gap-2">
                   <Loader2 className="animate-spin" size={18} />
-                  <span>กำลังยืนยันตัวตน...</span>
+                  <span>กำลังตรวจสอบสิทธิ์...</span>
                 </div>
               ) : (
-                <><ScanFace size={18} /> เข้าสู่ระบบ</>
+                <><ScanFace size={18} /> ยืนยันตัวตนและเข้าสู่ระบบ</>
               )}
             </button>
           </div>
           <div className="pt-2 border-t border-slate-100 w-full flex flex-col items-center gap-1">
             <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">SMC Property Soft v2.0</p>
-            <p className="text-[7px] text-slate-300">Powered by LIFF & Google Workspace</p>
+            <p className="text-[7px] text-slate-300">Powered by LIFF & Google Apps Script</p>
           </div>
         </div>
       </div>
