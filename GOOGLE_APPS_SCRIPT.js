@@ -23,7 +23,8 @@ function doGet(e) {
       const sheet = ss.getSheetByName('Employ_DB');
       const data = sheet.getDataRange().getValues();
       
-      // ค้นหาแถวที่ LINE ID (row[0]) และ Staff ID (row[1]) ตรงกันทั้งหมด
+      // ค้นหาแถวที่ LINE ID (row[0]) ตรงกับ ID ของผู้ใช้ปัจจุบัน
+      // และต้องมีรหัสพนักงาน (row[1]) ระบุไว้แล้วเท่านั้น
       const user = data.find(row => 
         String(row[0]).trim() === String(lineUserId).trim() && 
         String(row[1]).trim() !== ""
@@ -100,31 +101,23 @@ function doPost(e) {
     const sheet = ss.getSheetByName('Employ_DB');
     const db = sheet.getDataRange().getValues();
     
-    const inputLineId = String(body.lineUserId).trim();
-    const inputStaffId = String(body.staffId).trim();
+    const username = String(body.lineUserId).trim(); // Username (คอลัมน์ A)
+    const password = String(body.staffId).trim();    // Password (คอลัมน์ B)
 
-    // 1. ค้นหาแถวจาก Staff ID ก่อน (Password)
-    const userRow = db.find(row => String(row[1]).trim() === inputStaffId);
+    // Verification Logic: ตรวจสอบคู่ Username และ Password ในแถวเดียวกัน
+    const userRow = db.find(row =>
+      String(row[0]).trim() === username && 
+      String(row[1]).trim() === password
+    );
     
     if (!userRow) {
       return jsonResponse({ 
         success: false, 
-        message: 'ไม่พบรหัสพนักงานนี้ในระบบ' 
+        message: 'Username หรือ Password ไม่ถูกต้อง' 
       });
     }
 
-    // 2. ตรวจสอบว่า LINE User ID ในแถวนั้น ตรงกับที่ส่งมาหรือไม่ (Username)
-    // row[0] = LINE ID, row[1] = Staff ID
-    const dbLineId = String(userRow[0]).trim();
-    
-    if (dbLineId !== inputLineId) {
-      return jsonResponse({ 
-        success: false, 
-        message: 'User ID กับ Staff ID ไม่ตรงกัน' 
-      });
-    }
-
-    // ผ่านการตรวจสอบทั้งคู่
+    // เมื่อตรวจสอบผ่าน ส่งข้อมูล Profile กลับไป
     return jsonResponse({
       success: true,
       profile: {

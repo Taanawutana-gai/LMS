@@ -410,23 +410,23 @@ const App: React.FC = () => {
             </div>
           </div>
           <div>
-            <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">LMS AUTHENTICATION</p>
+            <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">SECURE LOGIN</p>
             <h2 className="text-xl font-black text-slate-800 tracking-tight">{lineName || 'LINE User'}</h2>
           </div>
           <div className="w-full space-y-5 text-left">
             <div className="space-y-1.5">
                <label className="text-[10px] font-black text-slate-400 uppercase ml-1 flex items-center gap-1.5">
-                 <Key size={12} className="text-blue-500" />
-                 LINE User ID (ระบบดึงให้อัตโนมัติ)
+                 <User size={12} className="text-blue-500" />
+                 Username (LINE User ID)
                </label>
                <div className="flex items-center gap-2 w-full bg-slate-100/80 text-slate-500 px-4 py-3 rounded-2xl font-bold text-[10px] border border-slate-200/50 cursor-not-allowed select-none">
-                  <span className="truncate">{userIdInput || 'กำลังรอรับข้อมูลจาก LIFF...'}</span>
+                  <span className="truncate">{userIdInput || 'Waiting for LINE...'}</span>
                </div>
             </div>
             <div className="space-y-1.5">
                <label className="text-[10px] font-black text-slate-400 uppercase ml-1 flex items-center gap-1.5">
                  <Lock size={12} className="text-blue-500" />
-                 Staff ID (ใช้เป็นรหัสผ่าน)
+                 Password (Staff ID)
                </label>
                <div className="relative">
                  <Hash size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
@@ -435,7 +435,7 @@ const App: React.FC = () => {
                   value={staffIdInput} 
                   onChange={e => setStaffIdInput(e.target.value)} 
                   className="w-full bg-white pl-10 pr-4 py-4 rounded-2xl font-bold ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm transition-all text-slate-800 placeholder:text-slate-300" 
-                  placeholder="ป้อนรหัสพนักงานของท่าน" 
+                  placeholder="ป้อนรหัสพนักงาน" 
                  />
                </div>
             </div>
@@ -453,16 +453,16 @@ const App: React.FC = () => {
               {loading ? (
                 <div className="flex items-center gap-2">
                   <Loader2 className="animate-spin" size={18} />
-                  <span>กำลังตรวจสอบสิทธิ์...</span>
+                  <span>Verifying...</span>
                 </div>
               ) : (
-                <><ScanFace size={18} /> ยืนยันตัวตนและเข้าสู่ระบบ</>
+                <><ScanFace size={18} /> Sign In</>
               )}
             </button>
           </div>
           <div className="pt-2 border-t border-slate-100 w-full flex flex-col items-center gap-1">
-            <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">SMC Property Soft v2.0</p>
-            <p className="text-[7px] text-slate-300">Powered by LIFF & Google Apps Script</p>
+            <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Enterprise Authentication v2.5</p>
+            <p className="text-[7px] text-slate-300">Contact IT/HR if you cannot sign in</p>
           </div>
         </div>
       </div>
@@ -474,7 +474,7 @@ const App: React.FC = () => {
       <header className="bg-white/80 backdrop-blur-md px-6 py-4 flex justify-between items-center sticky top-0 z-40 border-b border-slate-100">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg"><Calendar size={16} strokeWidth={3} /></div>
-          <div><h1 className="font-black text-slate-800 text-sm leading-none tracking-tight">LMS</h1><p className="text-[7px] font-black text-blue-500 uppercase tracking-widest mt-0.5">Designed by SMC</p></div>
+          <div><h1 className="font-black text-slate-800 text-sm leading-none tracking-tight">LMS</h1><p className="text-[7px] font-black text-blue-500 uppercase tracking-widest mt-0.5">Leave Management System</p></div>
         </div>
         <div className="flex items-center gap-2">
            {isEligibleManager && (
@@ -505,14 +505,14 @@ const App: React.FC = () => {
 
             <div className="grid grid-cols-3 gap-2.5">
               {balances.length > 0 ? balances.map(b => <DashboardCard key={b.type} type={b.type} used={b.used} remain={b.remain} />) : (
-                <div className="col-span-3 py-8 text-center bg-white/50 border border-dashed rounded-3xl text-[16px] text-slate-300 font-black uppercase tracking-widest">กำลังดึงข้อมูล...</div>
+                <div className="col-span-3 py-8 text-center bg-white/50 border border-dashed rounded-3xl text-[16px] text-slate-300 font-black uppercase tracking-widest">Loading...</div>
               )}
             </div>
 
             <section className="space-y-4">
               <div className="flex items-center justify-between px-1">
-                <h3 className="text-[14px] font-black text-slate-400 uppercase tracking-[0.2em]">รายการลาล่าสุด</h3>
-                <button onClick={() => setView('history')} className="text-[14px] font-black text-blue-500 uppercase tracking-widest hover:underline">ดูทั้งหมด</button>
+                <h3 className="text-[14px] font-black text-slate-400 uppercase tracking-[0.2em]">Recent Leaves</h3>
+                <button onClick={() => setView('history')} className="text-[14px] font-black text-blue-500 uppercase tracking-widest hover:underline">View All</button>
               </div>
               <div className="space-y-3">
                 {myRequests.length > 0 ? (
@@ -522,7 +522,7 @@ const App: React.FC = () => {
                 ) : (
                   <div className="py-12 text-center bg-white/40 border border-dashed rounded-[2.5rem] flex flex-col items-center gap-3">
                     <History size={24} className="text-slate-200" />
-                    <p className="text-[16px] text-slate-300 font-black uppercase tracking-widest">ไม่พบประวัติการลา</p>
+                    <p className="text-[16px] text-slate-300 font-black uppercase tracking-widest">No Leave History</p>
                   </div>
                 )}
               </div>
@@ -534,7 +534,7 @@ const App: React.FC = () => {
           <div className="space-y-6 animate-in fade-in duration-300">
             <header className="flex items-center gap-3">
               <button onClick={() => setView('dashboard')} className="p-2 bg-white rounded-xl text-slate-400 shadow-sm"><ChevronLeft size={20} /></button>
-              <h2 className="text-lg font-black text-slate-800 tracking-tight">ประวัติการลาทั้งหมด</h2>
+              <h2 className="text-lg font-black text-slate-800 tracking-tight">All History</h2>
             </header>
             <div className="space-y-3">
               {myRequests.length > 0 ? (
@@ -542,7 +542,7 @@ const App: React.FC = () => {
                   <RequestCard key={req.id} req={req} user={user} isHistoryView onViewImage={setZoomImg} onAction={handleAction} onResubmit={handleResubmit} />
                 ))
               ) : (
-                <div className="py-20 text-center bg-white rounded-[2.5rem] border border-dashed text-[10px] font-black text-slate-300 uppercase">ไม่พบข้อมูล</div>
+                <div className="py-20 text-center bg-white rounded-[2.5rem] border border-dashed text-[10px] font-black text-slate-300 uppercase">No records found</div>
               )}
             </div>
           </div>
@@ -552,8 +552,8 @@ const App: React.FC = () => {
           <div className="space-y-6 animate-in slide-in-from-right-10 duration-500">
             <section className="bg-slate-900 p-6 rounded-[2.5rem] shadow-2xl text-white space-y-6 min-h-[450px] border border-white/5">
               <div className="flex items-center justify-between">
-                <h3 className="font-black text-[11px] uppercase tracking-[0.3em] text-slate-400">Team Pending</h3>
-                <span className="px-3 py-1 bg-blue-600 rounded-full text-[11px] font-black uppercase tracking-widest">{teamPending.length} รายการ</span>
+                <h3 className="font-black text-[11px] uppercase tracking-[0.3em] text-slate-400">Team Requests</h3>
+                <span className="px-3 py-1 bg-blue-600 rounded-full text-[11px] font-black uppercase tracking-widest">{teamPending.length} Pending</span>
               </div>
               <div className="space-y-4">
                 {teamPending.length > 0 ? (
@@ -563,7 +563,7 @@ const App: React.FC = () => {
                 ) : (
                   <div className="py-24 text-center border border-dashed border-white/10 rounded-3xl flex flex-col items-center gap-4">
                     <CheckCircle2 size={32} className="text-slate-500" />
-                    <p className="text-[14px] font-black text-slate-300 uppercase tracking-widest">ไม่มีรายการค้างพิจารณา</p>
+                    <p className="text-[14px] font-black text-slate-300 uppercase tracking-widest">Nothing to approve</p>
                   </div>
                 )}
               </div>
@@ -575,22 +575,22 @@ const App: React.FC = () => {
           <div className="space-y-6 animate-in slide-in-from-right-10 duration-300">
             <header className="flex items-center gap-3">
               <button onClick={() => setView('dashboard')} className="p-2 bg-white rounded-xl text-slate-400 shadow-sm"><ChevronLeft size={20} /></button>
-              <h2 className="text-lg font-black text-slate-800 tracking-tight">ยื่นใบลาใหม่</h2>
+              <h2 className="text-lg font-black text-slate-800 tracking-tight">New Request</h2>
             </header>
             <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-50 space-y-6">
               <div className="space-y-2">
-                <label className="text-[14px] font-black text-slate-400 uppercase tracking-widest">ประเภทการลา</label>
+                <label className="text-[14px] font-black text-slate-400 uppercase tracking-widest">Leave Type</label>
                 <select value={newReq.type} onChange={e => setNewReq({...newReq, type: e.target.value as LeaveType})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-[14px] text-slate-700 ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500 appearance-none">
                   {Object.values(LeaveType).map(t => <option key={t} value={t}>{getLeaveTheme(t).label}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <label className="text-[14px] font-black text-slate-400 uppercase tracking-widest">วันเริ่ม</label>
+                  <label className="text-[14px] font-black text-slate-400 uppercase tracking-widest">Start Date</label>
                   <input type="date" value={newReq.startDate} onChange={e => setNewReq({...newReq, startDate:e.target.value})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-[14px] ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[14px] font-black text-slate-400 uppercase tracking-widest">วันสิ้นสุด</label>
+                  <label className="text-[14px] font-black text-slate-400 uppercase tracking-widest">End Date</label>
                   <input type="date" value={newReq.endDate} onChange={e => setNewReq({...newReq, endDate:e.target.value})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-[14px] ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500" />
                 </div>
               </div>
@@ -602,21 +602,21 @@ const App: React.FC = () => {
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center ${smartSummary.isValid ? 'bg-blue-500 text-white' : 'bg-rose-500 text-white shadow-lg shadow-rose-200'}`}>
                         {smartSummary.isValid ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
                       </div>
-                      <span className={`text-[14px] font-black uppercase ${smartSummary.isValid ? 'text-blue-600' : 'text-rose-600'}`}>แจ้งสรุปผลการตรวจสอบ</span>
+                      <span className={`text-[14px] font-black uppercase ${smartSummary.isValid ? 'text-blue-600' : 'text-rose-600'}`}>Request Summary</span>
                     </div>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <p className="text-[12px] font-bold text-slate-400 uppercase">จำนวนวันที่ใช้</p>
+                      <p className="text-[12px] font-bold text-slate-400 uppercase">Days</p>
                       <p className={`text-[14px] font-black ${smartSummary.isDateRangeValid ? 'text-slate-800' : 'text-rose-600'}`}>
-                        {smartSummary.isDateRangeValid ? `${smartSummary.totalDays} วัน` : 'ระบุไม่ถูกต้อง'}
+                        {smartSummary.isDateRangeValid ? `${smartSummary.totalDays} Days` : 'Invalid Date'}
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-[12px] font-bold text-slate-400 uppercase">สิทธิคงเหลือ</p>
+                      <p className="text-[12px] font-bold text-slate-400 uppercase">Remaining</p>
                       <p className={`text-[14px] font-black ${smartSummary.isBalanceOk ? 'text-slate-800' : 'text-rose-600'}`}>
-                        {smartSummary.remain} วัน {smartSummary.isBalanceOk ? '' : '(ไม่พอ!)'}
+                        {smartSummary.remain} Days {smartSummary.isBalanceOk ? '' : '(Insuff!)'}
                       </p>
                     </div>
                   </div>
@@ -624,11 +624,11 @@ const App: React.FC = () => {
               )}
 
               <div className="space-y-2">
-                <label className="text-[14px] font-black text-slate-400 uppercase tracking-widest">เหตุผลการลา</label>
-                <textarea value={newReq.reason} onChange={e => setNewReq({...newReq, reason:e.target.value})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-[14px] h-24 resize-none ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500" placeholder="ระบุเหตุผล..." />
+                <label className="text-[14px] font-black text-slate-400 uppercase tracking-widest">Reason</label>
+                <textarea value={newReq.reason} onChange={e => setNewReq({...newReq, reason:e.target.value})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none text-[14px] h-24 resize-none ring-1 ring-slate-100 focus:ring-2 focus:ring-blue-500" placeholder="Specify your reason..." />
               </div>
               <div className="space-y-2">
-                 <label className="text-[14px] font-black text-slate-400 uppercase tracking-widest">แนบรูปภาพ</label>
+                 <label className="text-[14px] font-black text-slate-400 uppercase tracking-widest">Attachment</label>
                  <div onClick={() => fileInputRef.current?.click()} className="w-full h-36 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center cursor-pointer overflow-hidden relative">
                    <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*" />
                    {newReq.attachment ? <img src={newReq.attachment} className="w-full h-full object-cover" /> : <Camera size={24} className="text-slate-300" />}
@@ -639,7 +639,7 @@ const App: React.FC = () => {
                 disabled={loading || (smartSummary !== null && !smartSummary.isValid)} 
                 className={`w-full text-white font-black py-5 rounded-3xl shadow-xl active:scale-95 transition-all text-[14px] uppercase tracking-widest flex items-center justify-center gap-2 ${loading || (smartSummary !== null && !smartSummary.isValid) ? 'bg-slate-300 cursor-not-allowed shadow-none' : 'bg-blue-600'}`}
               >
-                {loading ? <Loader2 className="animate-spin" /> : "ส่งใบลา"}
+                {loading ? <Loader2 className="animate-spin" /> : "Submit Request"}
               </button>
             </div>
           </div>
@@ -657,7 +657,7 @@ const App: React.FC = () => {
               <div className="flex justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-50"><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Office Site</span><span className="font-black text-slate-700 uppercase">{user?.siteId}</span></div>
             </div>
             <button onClick={() => setIsLoggedIn(false)} className="w-full mt-8 bg-rose-50 text-rose-500 font-black py-3 rounded-2xl flex items-center justify-center gap-2 uppercase text-[11px] tracking-widest shadow-md shadow-rose-100/50 active:scale-95 hover:bg-rose-100 transition-all">
-              <LogOut size={14} /> Logout System
+              <LogOut size={14} /> Logout
             </button>
           </div>
         )}
@@ -665,10 +665,10 @@ const App: React.FC = () => {
 
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-2xl border-t border-slate-100 px-4 py-5 flex justify-around items-center z-50 rounded-t-[3rem] shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
         {[
-          { icon: Home, label: 'หน้าแรก', v: 'dashboard' }, 
-          { icon: History, label: 'ประวัติ', v: 'history' }, 
-          ...(isEligibleManager ? [{ icon: CheckSquare, label: 'อนุมัติ', v: 'approval' }] : []), 
-          { icon: User, label: 'ฉัน', v: 'profile' }
+          { icon: Home, label: 'Home', v: 'dashboard' }, 
+          { icon: History, label: 'History', v: 'history' }, 
+          ...(isEligibleManager ? [{ icon: CheckSquare, label: 'Approvals', v: 'approval' }] : []), 
+          { icon: User, label: 'Profile', v: 'profile' }
         ].map(item => (
           <button key={item.v} onClick={() => setView(item.v)} className={`flex flex-col items-center gap-1.5 px-4 relative ${view === item.v ? 'text-blue-600' : 'text-slate-300'}`}>
             <item.icon size={22} strokeWidth={view === item.v ? 3 : 2} />
