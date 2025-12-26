@@ -22,10 +22,10 @@ function doGet(e) {
     if (action === 'checkUserStatus') {
       const sheet = ss.getSheetByName('Employ_DB');
       const data = sheet.getDataRange().getValues();
-      // ค้นหาแถวที่มี LINE User ID ตรงกัน (อ้างอิงตามตัวอย่าง: username = row[0])
+      // ตรวจสอบความถูกต้องโดยใช้เงื่อนไข row[0] = LINE ID
       const user = data.find(row => String(row[0]).trim() === String(lineUserId).trim());
       
-      if (user && user[1] != "") {
+      if (user && String(user[1]).trim() !== "") {
         return jsonResponse({ 
           success: true, 
           profile: { 
@@ -96,41 +96,47 @@ function doPost(e) {
     const sheet = ss.getSheetByName('Employ_DB');
     const data = sheet.getDataRange().getValues();
     
-    const inputStaffId = String(body.staffId).trim();
-    const inputLineUserId = String(body.lineUserId).trim();
+    const username = String(body.lineUserId).trim(); // LINE ID จากระบบ
+    const password = String(body.staffId).trim();    // Staff ID ที่ผู้ใช้กรอก
 
-    // 1. ค้นหาแถวโดย Staff ID ก่อน (ใช้เป็น Password ในบริบทนี้)
-    const staffIdx = data.findIndex(row => String(row[1]).trim() === inputStaffId);
+    // 1. ค้นหาแถวที่ตรงตามลอจิกที่คุณให้มา (พิจารณาการผูกครั้งแรกด้วย)
+    // เงื่อนไข: Staff ID (Password) ต้องตรง 
+    // และ (LINE ID (Username) ต้องตรง OR LINE ID ในฐานข้อมูลยังว่างอยู่)
+    const staffIdx = data.findIndex(row => {
+      const rowLineId = String(row[0]).trim();
+      const rowStaffId = String(row[1]).trim();
+      
+      const staffMatch = (rowStaffId === password);
+      const lineMatch = (rowLineId === username || rowLineId === "");
+      
+      return staffMatch && lineMatch;
+    });
     
     if (staffIdx === -1) {
-      return jsonResponse({ success: false, message: 'รหัสพนักงานไม่ถูกต้อง' });
+      return jsonResponse({ success: false, message: 'รหัสพนักงานไม่ถูกต้อง หรือถูกผูกกับบัญชีอื่นแล้ว' });
     }
 
     const targetRow = data[staffIdx];
-    const existingLineIdOnRow = String(targetRow[0]).trim();
+    const rowLineId = String(targetRow[0]).trim();
 
-    // 2. ตรวจสอบว่า Staff ID นี้ถูกผูกกับ LINE ID อื่นไปแล้วหรือยัง (Verification Logic)
-    if (existingLineIdOnRow !== "" && existingLineIdOnRow !== inputLineUserId) {
-      return jsonResponse({ success: false, message: 'รหัสพนักงานนี้ถูกลงทะเบียนด้วยบัญชีอื่นแล้ว' });
-    }
-
-    // 3. ตรวจสอบว่า LINE ID ปัจจุบัน เคยไปผูกกับ Staff ID อื่นหรือไม่
-    const otherStaffIdx = data.findIndex((row, idx) => 
-      idx !== staffIdx && String(row[0]).trim() === inputLineUserId
+    // 2. ตรวจสอบว่า LINE ID นี้ไปผูกกับ Staff ID อื่นที่ "ไม่ใช่แถวนี้" หรือไม่
+    const otherIdx = data.findIndex((row, idx) => 
+      idx !== staffIdx && String(row[0]).trim() === username
     );
-    if (otherStaffIdx !== -1) {
-      return jsonResponse({ success: false, message: 'บัญชี LINE นี้ถูกผูกไว้กับรหัสพนักงานอื่นแล้ว' });
+    
+    if (otherIdx !== -1) {
+      return jsonResponse({ success: false, message: 'บัญชี LINE นี้ถูกใช้งานโดยรหัสพนักงานอื่นแล้ว' });
     }
 
-    // 4. ผ่านเงื่อนไขทั้งหมด: ทำการผูก ID (ถ้ายังไม่มี) และส่งข้อมูลกลับ
-    if (existingLineIdOnRow === "") {
-      sheet.getRange(staffIdx + 1, 1).setValue(inputLineUserId);
+    // 3. หากผ่านเงื่อนไข ให้บันทึก LINE ID ลงในช่องว่าง (ถ้ายังไม่มี)
+    if (rowLineId === "") {
+      sheet.getRange(staffIdx + 1, 1).setValue(username);
     }
 
     return jsonResponse({
       success: true,
       profile: {
-        lineUserId: inputLineUserId,
+        lineUserId: username,
         staffId: targetRow[1],
         name: targetRow[2],
         siteId: targetRow[3],
