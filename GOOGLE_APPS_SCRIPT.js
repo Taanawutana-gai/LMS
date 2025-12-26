@@ -22,10 +22,14 @@ function doGet(e) {
     if (action === 'checkUserStatus') {
       const sheet = ss.getSheetByName('Employ_DB');
       const data = sheet.getDataRange().getValues();
-      // ตรวจสอบความถูกต้องโดยใช้เงื่อนไข row[0] = LINE ID
-      const user = data.find(row => String(row[0]).trim() === String(lineUserId).trim());
       
-      if (user && String(user[1]).trim() !== "") {
+      // ค้นหาแถวที่ LINE ID (row[0]) และ Staff ID (row[1]) มีข้อมูลครบถ้วน
+      const user = data.find(row => 
+        String(row[0]).trim() === String(lineUserId).trim() && 
+        String(row[1]).trim() !== ""
+      );
+      
+      if (user) {
         return jsonResponse({ 
           success: true, 
           profile: { 
@@ -38,7 +42,7 @@ function doGet(e) {
           } 
         });
       }
-      return jsonResponse({ success: false, message: 'Not linked' });
+      return jsonResponse({ success: false, message: 'Unauthorized' });
     }
 
     if (action === 'getBalances') {
@@ -94,54 +98,34 @@ function doPost(e) {
   
   if (body.action === 'LOGIN_USER') {
     const sheet = ss.getSheetByName('Employ_DB');
-    const data = sheet.getDataRange().getValues();
+    const db = sheet.getDataRange().getValues();
     
-    const username = String(body.lineUserId).trim(); // LINE ID จากระบบ
-    const password = String(body.staffId).trim();    // Staff ID ที่ผู้ใช้กรอก
+    const username = String(body.lineUserId).trim(); // LINE ID (คอลัมน์ A)
+    const password = String(body.staffId).trim();    // Staff ID (คอลัมน์ B)
 
-    // 1. ค้นหาแถวที่ตรงตามลอจิกที่คุณให้มา (พิจารณาการผูกครั้งแรกด้วย)
-    // เงื่อนไข: Staff ID (Password) ต้องตรง 
-    // และ (LINE ID (Username) ต้องตรง OR LINE ID ในฐานข้อมูลยังว่างอยู่)
-    const staffIdx = data.findIndex(row => {
-      const rowLineId = String(row[0]).trim();
-      const rowStaffId = String(row[1]).trim();
-      
-      const staffMatch = (rowStaffId === password);
-      const lineMatch = (rowLineId === username || rowLineId === "");
-      
-      return staffMatch && lineMatch;
-    });
-    
-    if (staffIdx === -1) {
-      return jsonResponse({ success: false, message: 'รหัสพนักงานไม่ถูกต้อง หรือถูกผูกกับบัญชีอื่นแล้ว' });
-    }
-
-    const targetRow = data[staffIdx];
-    const rowLineId = String(targetRow[0]).trim();
-
-    // 2. ตรวจสอบว่า LINE ID นี้ไปผูกกับ Staff ID อื่นที่ "ไม่ใช่แถวนี้" หรือไม่
-    const otherIdx = data.findIndex((row, idx) => 
-      idx !== staffIdx && String(row[0]).trim() === username
+    // ใช้ Verification Logic แบบเข้มงวดตามตัวอย่าง
+    const userRow = db.find(row => 
+      String(row[0]).trim() === username && 
+      String(row[1]).trim() === password
     );
     
-    if (otherIdx !== -1) {
-      return jsonResponse({ success: false, message: 'บัญชี LINE นี้ถูกใช้งานโดยรหัสพนักงานอื่นแล้ว' });
+    if (!userRow) {
+      return jsonResponse({ 
+        success: false, 
+        message: 'Username หรือ Password ไม่ถูกต้อง (กรุณาติดต่อ HR หากยังไม่มีข้อมูลในระบบ)' 
+      });
     }
 
-    // 3. หากผ่านเงื่อนไข ให้บันทึก LINE ID ลงในช่องว่าง (ถ้ายังไม่มี)
-    if (rowLineId === "") {
-      sheet.getRange(staffIdx + 1, 1).setValue(username);
-    }
-
+    // ส่งข้อมูลผู้ใช้กลับไปเมื่อผ่านการตรวจสอบแล้ว
     return jsonResponse({
       success: true,
       profile: {
-        lineUserId: username,
-        staffId: targetRow[1],
-        name: targetRow[2],
-        siteId: targetRow[3],
-        roleType: targetRow[4],
-        position: targetRow[5]
+        lineUserId: userRow[0],
+        staffId: userRow[1],
+        name: userRow[2],
+        siteId: userRow[3],
+        roleType: userRow[4],
+        position: userRow[5]
       }
     });
   }
