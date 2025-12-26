@@ -259,8 +259,9 @@ const App: React.FC = () => {
             setLineName(profile.displayName);
             setLinePicture(profile.pictureUrl);
             setUserIdInput(profile.userId);
-            const u = await SheetService.checkUserStatus(profile.userId);
-            if (u) { setUser(u); fetchData(u); setIsLoggedIn(true); }
+            // บังคับให้ผู้ใช้งานต้องกด Login เองเสมอ ไม่ต้องเช็คสถานะเพื่อ Auto-login
+          } else {
+            liff.login();
           }
         } catch (e) { console.error('LIFF Init Error:', e); }
       }
@@ -274,13 +275,14 @@ const App: React.FC = () => {
     if (!sid) { setLoginError('กรุณากรอกรหัสพนักงาน'); return; }
     setLoading(true);
     try {
+      // ใช้ LINE User ID เป็น Username และ Staff ID เป็น Password
       const result = await SheetService.loginUser(sid, userIdInput);
       if (result.success && result.profile) {
         setUser(result.profile);
         fetchData(result.profile);
         setIsLoggedIn(true);
       } else {
-        setLoginError(result.message || 'รหัสพนักงานไม่ถูกต้อง หรือเชื่อมต่อไม่ได้');
+        setLoginError(result.message || 'Username หรือ Password ไม่ถูกต้อง');
       }
     } catch (e) { 
       setLoginError('เกิดข้อผิดพลาดในการเชื่อมต่อ'); 
@@ -656,7 +658,7 @@ const App: React.FC = () => {
               <div className="flex justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-50"><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Employee ID</span><span className="font-black text-slate-700">{user?.staffId}</span></div>
               <div className="flex justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-50"><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Office Site</span><span className="font-black text-slate-700 uppercase">{user?.siteId}</span></div>
             </div>
-            <button onClick={() => setIsLoggedIn(false)} className="w-full mt-8 bg-rose-50 text-rose-500 font-black py-3 rounded-2xl flex items-center justify-center gap-2 uppercase text-[11px] tracking-widest shadow-md shadow-rose-100/50 active:scale-95 hover:bg-rose-100 transition-all">
+            <button onClick={() => { setIsLoggedIn(false); setUser(null); setStaffIdInput(''); }} className="w-full mt-8 bg-rose-50 text-rose-500 font-black py-3 rounded-2xl flex items-center justify-center gap-2 uppercase text-[11px] tracking-widest shadow-md shadow-rose-100/50 active:scale-95 hover:bg-rose-100 transition-all">
               <LogOut size={14} /> Logout
             </button>
           </div>
