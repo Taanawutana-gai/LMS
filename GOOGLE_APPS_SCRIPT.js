@@ -6,6 +6,37 @@
 const TARGET_SHEET_ID = "1q9elvW0_-OkAi8vBwHg38579Z1ozCgeEC27fnLaYBtk";
 const ATTACHMENT_FOLDER_ID = "1Or-p8MwFH35PbROikrvjDS3yQ-V6IOGr";
 
+/**
+ * ฟังก์ชันตรวจสอบความถูกต้องของ Username (LINE ID) และ Password (Staff ID)
+ */
+function handleLogin(username, password, ss) {
+  const sheet = ss.getSheetByName('Employ_DB');
+  const db = sheet.getDataRange().getValues(); // ดึงข้อมูลจากชีท "Employ_DB"
+
+  // ตรวจสอบ Verification Logic: คู่ข้อมูลต้องตรงกันในแถวเดียว
+  const userRow = db.find(row =>
+    String(row[0]).trim() === String(username).trim() && // ตรวจ Username (คอลัมน์ A)
+    String(row[1]).trim() === String(password).trim()    // ตรวจ Password (คอลัมน์ B)
+  );
+
+  if (!userRow) {
+    return { success: false, message: "Username หรือ Password ไม่ถูกต้อง" };
+  }
+
+  // ส่งข้อมูลโปรไฟล์กลับไปเมื่อผ่านการตรวจสอบ
+  return {
+    success: true,
+    profile: {
+      lineUserId: userRow[0],
+      staffId: userRow[1],
+      name: userRow[2],
+      siteId: userRow[3],
+      roleType: userRow[4],
+      position: userRow[5]
+    }
+  };
+}
+
 function doGet(e) {
   if (!e || !e.parameter || !e.parameter.action) {
     return ContentService.createTextOutput("LMS Backend is running.").setMimeType(ContentService.MimeType.TEXT);
@@ -13,38 +44,12 @@ function doGet(e) {
 
   const action = e.parameter.action;
   const staffId = e.parameter.staffId;
-  const lineUserId = e.parameter.lineUserId;
   const sheetId = e.parameter.sheetId || TARGET_SHEET_ID;
 
   try {
     const ss = SpreadsheetApp.openById(sheetId);
     
-    if (action === 'checkUserStatus') {
-      const sheet = ss.getSheetByName('Employ_DB');
-      const data = sheet.getDataRange().getValues();
-      
-      // ค้นหาแถวที่ LINE ID (row[0]) ตรงกับ ID ของผู้ใช้ปัจจุบัน
-      // และต้องมีรหัสพนักงาน (row[1]) ระบุไว้แล้วเท่านั้น
-      const user = data.find(row => 
-        String(row[0]).trim() === String(lineUserId).trim() && 
-        String(row[1]).trim() !== ""
-      );
-      
-      if (user) {
-        return jsonResponse({ 
-          success: true, 
-          profile: { 
-            lineUserId: user[0], 
-            staffId: user[1], 
-            name: user[2], 
-            siteId: user[3], 
-            roleType: user[4], 
-            position: user[5] 
-          } 
-        });
-      }
-      return jsonResponse({ success: false, message: 'Unauthorized' });
-    }
+    // หมายเหตุ: ปิด action 'checkUserStatus' เพื่อบังคับให้ Login ผ่าน Password เสมอ
 
     if (action === 'getBalances') {
       const sheet = ss.getSheetByName('Leave_Balances');
@@ -98,37 +103,8 @@ function doPost(e) {
   const ss = SpreadsheetApp.openById(body.sheetId || TARGET_SHEET_ID);
   
   if (body.action === 'LOGIN_USER') {
-    const sheet = ss.getSheetByName('Employ_DB');
-    const db = sheet.getDataRange().getValues();
-    
-    const username = String(body.lineUserId).trim(); // Username (คอลัมน์ A)
-    const password = String(body.staffId).trim();    // Password (คอลัมน์ B)
-
-    // Verification Logic: ตรวจสอบคู่ Username และ Password ในแถวเดียวกัน
-    const userRow = db.find(row =>
-      String(row[0]).trim() === username && 
-      String(row[1]).trim() === password
-    );
-    
-    if (!userRow) {
-      return jsonResponse({ 
-        success: false, 
-        message: 'Username หรือ Password ไม่ถูกต้อง' 
-      });
-    }
-
-    // เมื่อตรวจสอบผ่าน ส่งข้อมูล Profile กลับไป
-    return jsonResponse({
-      success: true,
-      profile: {
-        lineUserId: userRow[0],
-        staffId: userRow[1],
-        name: userRow[2],
-        siteId: userRow[3],
-        roleType: userRow[4],
-        position: userRow[5]
-      }
-    });
+    const result = handleLogin(body.lineUserId, body.staffId, ss);
+    return jsonResponse(result);
   }
 
   if (body.action === 'addRequest') {
