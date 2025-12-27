@@ -13,7 +13,8 @@ function handleLogin(username, password, ss) {
   const sheet = ss.getSheetByName('Employ_DB');
   const db = sheet.getDataRange().getValues(); // ดึงข้อมูลจากชีท "Employ_DB"
 
-  // ตรวจสอบ Verification Logic: คู่ข้อมูลต้องตรงกันในแถวเดียว
+  // 2. บรรทัดนี้คือส่วนที่ตรวจสอบ (Verification Logic)
+  // ตรวจสอบความถูกต้องของคู่ข้อมูล: Username (คอลัมน์ A) และ Password (คอลัมน์ B)
   const userRow = db.find(row =>
     String(row[0]).trim() === String(username).trim() && // ตรวจ Username (คอลัมน์ A)
     String(row[1]).trim() === String(password).trim()    // ตรวจ Password (คอลัมน์ B)
@@ -49,8 +50,6 @@ function doGet(e) {
   try {
     const ss = SpreadsheetApp.openById(sheetId);
     
-    // หมายเหตุ: ปิด action 'checkUserStatus' เพื่อบังคับให้ Login ผ่าน Password เสมอ
-
     if (action === 'getBalances') {
       const sheet = ss.getSheetByName('Leave_Balances');
       const data = sheet.getDataRange().getValues();
@@ -103,8 +102,8 @@ function doPost(e) {
   const ss = SpreadsheetApp.openById(body.sheetId || TARGET_SHEET_ID);
   
   if (body.action === 'LOGIN_USER') {
-    const result = handleLogin(body.lineUserId, body.staffId, ss);
-    return jsonResponse(result);
+    // ดึงค่า username และ password จาก body เพื่อส่งตรวจสอบ
+    return jsonResponse(handleLogin(body.username, body.password, ss));
   }
 
   if (body.action === 'addRequest') {

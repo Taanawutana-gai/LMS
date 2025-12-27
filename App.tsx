@@ -259,7 +259,6 @@ const App: React.FC = () => {
             setLineName(profile.displayName);
             setLinePicture(profile.pictureUrl);
             setUserIdInput(profile.userId);
-            // บังคับให้ผู้ใช้งานต้องกด Login เองเสมอ ไม่ต้องเช็คสถานะเพื่อ Auto-login
           } else {
             liff.login();
           }
@@ -275,8 +274,8 @@ const App: React.FC = () => {
     if (!sid) { setLoginError('กรุณากรอกรหัสพนักงาน'); return; }
     setLoading(true);
     try {
-      // ใช้ LINE User ID เป็น Username และ Staff ID เป็น Password
-      const result = await SheetService.loginUser(sid, userIdInput);
+      // ตรวจสอบ Username (LINE User ID) และ Password (Staff ID)
+      const result = await SheetService.loginUser(userIdInput, sid);
       if (result.success && result.profile) {
         setUser(result.profile);
         fetchData(result.profile);

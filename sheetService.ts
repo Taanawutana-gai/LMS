@@ -2,7 +2,7 @@
 import { UserProfile, LeaveRequest, RawLeaveBalance, LeaveStatus } from './types.ts';
 
 const SHEET_ID = '1q9elvW0_-OkAi8vBwHg38579Z1ozCgeEC27fnLaYBtk';
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzACnYT26tqVaPEjjAqpA6oH0r2imjm4EIuEX2K9-XxdheLjqNCaOPMZl9qdByvHactRQ/exec'; 
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4bxdvMTsQsqiGjnezxQ0y--z1E0zw_-uYdT9OUb8Mr0yoMIrhNniYLSQ1c5k7yuPK2A/exec'; 
 
 export const SheetService = {
   async checkUserStatus(lineUserId: string): Promise<UserProfile | null> {
@@ -16,7 +16,7 @@ export const SheetService = {
     }
   },
 
-  async loginUser(staffId: string, lineUserId: string): Promise<{ success: boolean; message?: string; profile?: UserProfile }> {
+  async loginUser(username: string, password: string): Promise<{ success: boolean; message?: string; profile?: UserProfile }> {
     try {
       const response = await fetch(SCRIPT_URL, {
         method: 'POST',
@@ -25,8 +25,8 @@ export const SheetService = {
         body: JSON.stringify({ 
           action: 'LOGIN_USER', 
           sheetId: SHEET_ID, 
-          staffId, 
-          lineUserId 
+          username, 
+          password 
         })
       });
       return await response.json();
