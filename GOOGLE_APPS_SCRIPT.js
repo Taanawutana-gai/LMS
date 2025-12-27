@@ -7,35 +7,43 @@ const TARGET_SHEET_ID = "1q9elvW0_-OkAi8vBwHg38579Z1ozCgeEC27fnLaYBtk";
 const ATTACHMENT_FOLDER_ID = "1Or-p8MwFH35PbROikrvjDS3yQ-V6IOGr";
 
 /**
- * ฟังก์ชันตรวจสอบความถูกต้องของ Username (LINE ID) และ Password (Staff ID)
+ * ฟังก์ชันตรวจสอบความถูกต้องของคู่ข้อมูล LINE ID (Username) และ Staff ID (Password)
+ * จากชีท "Employ_DB"
  */
 function handleLogin(username, password, ss) {
-  const sheet = ss.getSheetByName('Employ_DB');
-  const db = sheet.getDataRange().getValues(); // ดึงข้อมูลจากชีท "Employ_DB"
+  try {
+    const sheet = ss.getSheetByName('Employ_DB');
+    if (!sheet) return { success: false, message: "ไม่พบฐานข้อมูลพนักงาน (Employ_DB)" };
+    
+    const db = sheet.getDataRange().getValues(); 
 
-  // 2. บรรทัดนี้คือส่วนที่ตรวจสอบ (Verification Logic)
-  // ตรวจสอบความถูกต้องของคู่ข้อมูล: Username (คอลัมน์ A) และ Password (คอลัมน์ B)
-  const userRow = db.find(row =>
-    String(row[0]).trim() === String(username).trim() && // ตรวจ Username (คอลัมน์ A)
-    String(row[1]).trim() === String(password).trim()    // ตรวจ Password (คอลัมน์ B)
-  );
+    // Verification Logic: ตรวจสอบความถูกต้องของคู่ข้อมูลในแถวเดียวกัน
+    // username คือ LINE ID จาก LIFF (ต้องตรงกับ คอลัมน์ A)
+    // password คือ Staff ID ที่ผู้ใช้กรอก (ต้องตรงกับ คอลัมน์ B)
+    const userRow = db.find(row => 
+      String(row[0] || '').trim() === String(username || '').trim() && // ตรวจ Username (คอลัมน์ A)
+      String(row[1] || '').trim() === String(password || '').trim()    // ตรวจ Password (คอลัมน์ B)
+    );
 
-  if (!userRow) {
-    return { success: false, message: "Username หรือ Password ไม่ถูกต้อง" };
-  }
-
-  // ส่งข้อมูลโปรไฟล์กลับไปเมื่อผ่านการตรวจสอบ
-  return {
-    success: true,
-    profile: {
-      lineUserId: userRow[0],
-      staffId: userRow[1],
-      name: userRow[2],
-      siteId: userRow[3],
-      roleType: userRow[4],
-      position: userRow[5]
+    if (!userRow) {
+      return { success: false, message: "Username หรือ Password ไม่ถูกต้อง" };
     }
-  };
+
+    // ส่งข้อมูลผู้ใช้กลับไปเมื่อผ่านการตรวจสอบ
+    return {
+      success: true,
+      profile: {
+        lineUserId: String(userRow[0]).trim(),
+        staffId: String(userRow[1]).trim(),
+        name: userRow[2],
+        siteId: userRow[3],
+        roleType: userRow[4],
+        position: userRow[5]
+      }
+    };
+  } catch (err) {
+    return { success: false, message: "Backend Error: " + err.toString() };
+  }
 }
 
 function doGet(e) {
@@ -50,10 +58,12 @@ function doGet(e) {
   try {
     const ss = SpreadsheetApp.openById(sheetId);
     
+    // หมายเหตุ: ปิด action 'checkUserStatus' ใน doGet เพื่อบังคับใช้ Password เสมอ
+
     if (action === 'getBalances') {
       const sheet = ss.getSheetByName('Leave_Balances');
       const data = sheet.getDataRange().getValues();
-      const row = data.find(r => String(r[0]).trim() === String(staffId).trim());
+      const row = data.find(r => String(r[0] || '').trim() === String(staffId || '').trim());
       if (row) {
         const balances = [
           { type: 'ลาพักร้อน (Annual Leave)', used: row[3], remain: row[4] },
@@ -74,7 +84,7 @@ function doGet(e) {
       if (!sheet) return jsonResponse({ success: true, requests: [] });
       const data = sheet.getDataRange().getValues();
       data.shift();
-      let filtered = (action === 'getAllRequests') ? data : data.filter(r => String(r[2]).trim() === String(staffId).trim());
+      let filtered = (action === 'getAllRequests') ? data : data.filter(r => String(r[2] || '').trim() === String(staffId || '').trim());
       const res = filtered.map(r => ({
         appliedDate: r[0], id: r[1], staffId: r[2], staffName: r[3], siteId: r[4],
         type: r[5], startDate: r[6], endDate: r[7], totalDays: r[8], reason: r[9],
@@ -89,7 +99,7 @@ function doGet(e) {
 
 function doPost(e) {
   if (!e || !e.postData || !e.postData.contents) {
-    return jsonResponse({ success: false, message: "Manual run detected." });
+    return jsonResponse({ success: false, message: "No data provided." });
   }
 
   let body;
@@ -102,7 +112,7 @@ function doPost(e) {
   const ss = SpreadsheetApp.openById(body.sheetId || TARGET_SHEET_ID);
   
   if (body.action === 'LOGIN_USER') {
-    // ดึงค่า username และ password จาก body เพื่อส่งตรวจสอบ
+    // ตรวจสอบ Username (LINE ID) และ Password (Staff ID)
     return jsonResponse(handleLogin(body.username, body.password, ss));
   }
 
@@ -147,7 +157,7 @@ function doPost(e) {
     }
   }
   
-  return jsonResponse({ success: false });
+  return jsonResponse({ success: false, message: "Unknown action" });
 }
 
 function updateBalances(ss, req, status) {
@@ -156,7 +166,7 @@ function updateBalances(ss, req, status) {
   const days = parseFloat(req[8]);
   const sheet = ss.getSheetByName('Leave_Balances');
   const data = sheet.getDataRange().getValues();
-  const idx = data.findIndex(r => String(r[0]).trim() === String(staffId).trim());
+  const idx = data.findIndex(r => String(r[0] || '').trim() === String(staffId || '').trim());
   if (idx === -1) return;
   const row = idx + 1;
 

@@ -212,6 +212,7 @@ const DashboardCard: React.FC<{ type: LeaveType; used: number; remain: number }>
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [liffLoading, setLiffLoading] = useState(true);
   const [view, setView] = useState('dashboard');
   const [user, setUser] = useState<UserProfile | null>(null);
   const [balances, setBalances] = useState<LeaveBalance[]>([]);
@@ -262,7 +263,14 @@ const App: React.FC = () => {
           } else {
             liff.login();
           }
-        } catch (e) { console.error('LIFF Init Error:', e); }
+        } catch (e) { 
+          console.error('LIFF Init Error:', e); 
+          setLoginError('ไม่สามารถเชื่อมต่อ LINE LIFF ได้');
+        } finally {
+          setLiffLoading(false);
+        }
+      } else {
+        setLiffLoading(false);
       }
     };
     init();
@@ -271,22 +279,28 @@ const App: React.FC = () => {
   const handleLogin = async () => {
     setLoginError(null);
     const sid = staffIdInput.trim();
-    if (!sid) { setLoginError('กรุณากรอกรหัสพนักงาน'); return; }
+    if (!sid) { setLoginError('กรุณากรอกรหัสพนักงาน (Password)'); return; }
+    if (!userIdInput) { setLoginError('รอข้อมูลจาก LINE...'); return; }
+    
     setLoading(true);
     try {
-      // ตรวจสอบ Username (LINE User ID) และ Password (Staff ID)
+      // ตรวจสอบคู่ข้อมูล LINE User ID (Username) และ Staff ID (Password)
+      // userIdInput = LINE ID (จาก LIFF)
+      // sid = Staff ID (จากช่องกรอก)
       const result = await SheetService.loginUser(userIdInput, sid);
+      
       if (result.success && result.profile) {
         setUser(result.profile);
-        fetchData(result.profile);
+        await fetchData(result.profile);
         setIsLoggedIn(true);
       } else {
         setLoginError(result.message || 'Username หรือ Password ไม่ถูกต้อง');
       }
     } catch (e) { 
-      setLoginError('เกิดข้อผิดพลาดในการเชื่อมต่อ'); 
+      setLoginError('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์'); 
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -412,7 +426,7 @@ const App: React.FC = () => {
           </div>
           <div>
             <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">SECURE LOGIN</p>
-            <h2 className="text-xl font-black text-slate-800 tracking-tight">{lineName || 'LINE User'}</h2>
+            <h2 className="text-xl font-black text-slate-800 tracking-tight">{lineName || (liffLoading ? 'Connecting LINE...' : 'LINE User')}</h2>
           </div>
           <div className="w-full space-y-5 text-left">
             <div className="space-y-1.5">
@@ -421,7 +435,7 @@ const App: React.FC = () => {
                  Username (LINE User ID)
                </label>
                <div className="flex items-center gap-2 w-full bg-slate-100/80 text-slate-500 px-4 py-3 rounded-2xl font-bold text-[10px] border border-slate-200/50 cursor-not-allowed select-none">
-                  <span className="truncate">{userIdInput || 'Waiting for LINE...'}</span>
+                  <span className="truncate">{userIdInput || (liffLoading ? 'Fetching ID...' : 'Please login in LINE')}</span>
                </div>
             </div>
             <div className="space-y-1.5">
@@ -437,6 +451,7 @@ const App: React.FC = () => {
                   onChange={e => setStaffIdInput(e.target.value)} 
                   className="w-full bg-white pl-10 pr-4 py-4 rounded-2xl font-bold ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm transition-all text-slate-800 placeholder:text-slate-300" 
                   placeholder="ป้อนรหัสพนักงาน" 
+                  onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
                  />
                </div>
             </div>
@@ -448,7 +463,7 @@ const App: React.FC = () => {
             )}
             <button 
               onClick={handleLogin} 
-              disabled={loading || !userIdInput} 
+              disabled={loading || liffLoading || !userIdInput} 
               className="w-full bg-blue-600 text-white font-black py-4.5 rounded-2xl shadow-xl shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs disabled:opacity-50 h-[56px]"
             >
               {loading ? (
@@ -463,7 +478,7 @@ const App: React.FC = () => {
           </div>
           <div className="pt-2 border-t border-slate-100 w-full flex flex-col items-center gap-1">
             <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Enterprise Authentication v2.5</p>
-            <p className="text-[7px] text-slate-300">Contact IT/HR if you cannot sign in</p>
+            <p className="text-[7px] text-slate-300 text-center px-4">ระบบตรวจสอบคู่ข้อมูล LINE ID และ Staff ID เพื่อความปลอดภัย</p>
           </div>
         </div>
       </div>

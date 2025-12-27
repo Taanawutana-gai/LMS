@@ -2,19 +2,10 @@
 import { UserProfile, LeaveRequest, RawLeaveBalance, LeaveStatus } from './types.ts';
 
 const SHEET_ID = '1q9elvW0_-OkAi8vBwHg38579Z1ozCgeEC27fnLaYBtk';
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4bxdvMTsQsqiGjnezxQ0y--z1E0zw_-uYdT9OUb8Mr0yoMIrhNniYLSQ1c5k7yuPK2A/exec'; 
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyx23sQblWXmrvtUL6Rr6ZJ2FhNryuA8D2CyTTsSjQTtk7k6E5tAsDS-R-0B0CF75wbaA/exec'; 
 
 export const SheetService = {
-  async checkUserStatus(lineUserId: string): Promise<UserProfile | null> {
-    try {
-      const response = await fetch(`${SCRIPT_URL}?action=checkUserStatus&lineUserId=${lineUserId}&sheetId=${SHEET_ID}`);
-      const data = await response.json();
-      return data.success ? data.profile : null;
-    } catch (error) {
-      console.error('CheckUserStatus Error:', error);
-      return null;
-    }
-  },
+  // นำ checkUserStatus ออกเพื่อบังคับให้ต้องกรอก Password (Staff ID) เสมอในการ Login ครั้งแรก
 
   async loginUser(username: string, password: string): Promise<{ success: boolean; message?: string; profile?: UserProfile }> {
     try {
@@ -25,8 +16,8 @@ export const SheetService = {
         body: JSON.stringify({ 
           action: 'LOGIN_USER', 
           sheetId: SHEET_ID, 
-          username, 
-          password 
+          username: username.trim(), 
+          password: password.trim() 
         })
       });
       return await response.json();
