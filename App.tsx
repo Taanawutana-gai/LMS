@@ -425,14 +425,14 @@ const App: React.FC = () => {
             </div>
           </div>
           <div>
-            <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">SECURE LOGIN</p>
+            <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">LMS</p>
             <h2 className="text-xl font-black text-slate-800 tracking-tight">{lineName || (liffLoading ? 'Connecting LINE...' : 'LINE User')}</h2>
           </div>
           <div className="w-full space-y-5 text-left">
             <div className="space-y-1.5">
                <label className="text-[10px] font-black text-slate-400 uppercase ml-1 flex items-center gap-1.5">
                  <User size={12} className="text-blue-500" />
-                 Username (LINE User ID)
+                 Use ID
                </label>
                <div className="flex items-center gap-2 w-full bg-slate-100/80 text-slate-500 px-4 py-3 rounded-2xl font-bold text-[10px] border border-slate-200/50 cursor-not-allowed select-none">
                   <span className="truncate">{userIdInput || (liffLoading ? 'Fetching ID...' : 'Please login in LINE')}</span>
@@ -441,7 +441,7 @@ const App: React.FC = () => {
             <div className="space-y-1.5">
                <label className="text-[10px] font-black text-slate-400 uppercase ml-1 flex items-center gap-1.5">
                  <Lock size={12} className="text-blue-500" />
-                 Password (Staff ID)
+                 Staff ID
                </label>
                <div className="relative">
                  <Hash size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
@@ -472,12 +472,12 @@ const App: React.FC = () => {
                   <span>Verifying...</span>
                 </div>
               ) : (
-                <><ScanFace size={18} /> Sign In</>
+                <><ScanFace size={18} /> Login</>
               )}
             </button>
           </div>
           <div className="pt-2 border-t border-slate-100 w-full flex flex-col items-center gap-1">
-            <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Enterprise Authentication v2.5</p>
+            <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">SMC Property Soft</p>
             <p className="text-[7px] text-slate-300 text-center px-4">ระบบตรวจสอบคู่ข้อมูล LINE ID และ Staff ID เพื่อความปลอดภัย</p>
           </div>
         </div>
