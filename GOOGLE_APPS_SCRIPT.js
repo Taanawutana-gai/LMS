@@ -170,6 +170,22 @@ function updateBalances(ss, req, status) {
   if (idx === -1) return;
   const row = idx + 1;
 
+  // การตั้งค่าคอลัมน์ (1-based index)
+  // 4=D, 5=E (Annual), 6=F, 7=G (Sick), 8=H, 9=I (Personal), 10=J, 11=K (Maternity)
+  // 12=L, 13=M (Public), 14=N, 15=O (LWOP), 16=P (Switch Used), 17=Q, 18=R (Other)
+
+  if (type === 'สลับวันหยุดประจำสัปดาห์ (Weekly Holiday Switch)') {
+    // กรณีสลับวันหยุด:
+    // 1. เพิ่ม Switch Used (Col 16) เพื่อเก็บประวัติ
+    // 2. เพิ่ม Other Remain (Col 18) เพื่อให้พนักงานมีสิทธิ์ลา "อื่นๆ" เพิ่มขึ้น
+    const currentSwitchUsed = parseFloat(sheet.getRange(row, 16).getValue() || 0);
+    const currentOtherRemain = parseFloat(sheet.getRange(row, 18).getValue() || 0);
+    
+    sheet.getRange(row, 16).setValue(currentSwitchUsed + days);
+    sheet.getRange(row, 18).setValue(currentOtherRemain + days);
+    return;
+  }
+
   const map = {
     'ลาพักร้อน (Annual Leave)': [4, 5],
     'ลาป่วย (Sick Leave)': [6, 7],
